@@ -7,6 +7,6 @@ public class Main {
         while(true){
         System.out.print("$ ");
         String command = sc.nextLine();
-        System.out.print(command +": command not found");}
+        System.out.println(command +": command not found");}
     }
 }
