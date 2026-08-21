@@ -38,7 +38,7 @@ public class Main {
         for(String dir : pathDir){
            File file = new File(dir, command);
            if(file.exists() && file.canExecute()){
-            return " is " + dir;
+            return " is " + file.getAbsolutePath();
            }
         }
         return ": not found";
