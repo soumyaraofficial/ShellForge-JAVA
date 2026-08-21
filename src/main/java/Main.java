@@ -21,6 +21,9 @@ public class Main {
                     case "exit":
                         System.out.println(type +" is a shell builtin");
                         break;
+                    case "type":
+                        System.out.println(type +" is a shell builtin");
+                        break;
                     default:
                         System.out.println(type +" : not found");
                         break;
