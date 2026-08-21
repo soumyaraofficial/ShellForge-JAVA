@@ -1,8 +1,11 @@
+import java.io.File;
+import java.nio.file.Path;
 import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws Exception {
         // TODO: Uncomment the code below to pass the first stage
+
         Scanner sc = new Scanner(System.in);
         while (true) {
             System.out.print("$ ");
@@ -10,29 +13,33 @@ public class Main {
             if (command.equals("exit")) {
                 break;
             } else if (command.substring(0, 4).equals("echo")) {
+
                 System.out.println(command.substring(5, command.length()));
-            } else if (command.substring(0, 4).equals("type")){
-               
-                String type = command.substring(5, command.length());
-                switch (type) {
-                    case "echo":
-                        System.out.println(type +" is a shell builtin");
-                        break;
-                    case "exit":
-                        System.out.println(type +" is a shell builtin");
-                        break;
-                    case "type":
-                        System.out.println(type +" is a shell builtin");
-                        break;
-                    default:
-                        System.out.println(type +": not found");
-                        break;
-                }
-               // System.out.println(type +" is a shell builtin");
+                
+            } else if (command.substring(0, 4).equals("type")) {
+                
+                System.out.println(command + type(command));
 
             } else {
                 System.out.println(command + ": command not found");
             }
         }
+    }
+
+    public static String type(String command){
+      
+        String[] builin = {"exit","echo", "type"};
+        String path = System.getenv("PATH");
+        String[] pathDir = path.split(":");
+        for(String s : builin){
+            if(s.equals(command))return " is a shell builtin";
+        }
+        for(String dir : pathDir){
+           File file = new File(dir, command);
+           if(file.exists() && file.canExecute()){
+            return " is " + dir;
+           }
+        }
+        return ": not found";
     }
 }
