@@ -17,8 +17,8 @@ public class Main {
                 System.out.println(command.substring(5, command.length()));
                 
             } else if (command.substring(0, 4).equals("type")) {
-                
-                System.out.println(command + type(command));
+                String search = command.substring(5, command.length());
+                System.out.println(search + type(search));
 
             } else {
                 System.out.println(command + ": command not found");
@@ -34,6 +34,7 @@ public class Main {
         for(String s : builin){
             if(s.equals(command))return " is a shell builtin";
         }
+
         for(String dir : pathDir){
            File file = new File(dir, command);
            if(file.exists() && file.canExecute()){
