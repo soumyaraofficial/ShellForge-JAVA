@@ -3,6 +3,8 @@ import java.nio.file.Path;
 import java.util.Scanner;
 
 public class Main {
+
+    public static Path currentDirectory = Path.of("").toAbsolutePath();
     public static void main(String[] args) throws Exception {
         // TODO: Uncomment the code below to pass the first stage
 
@@ -13,7 +15,7 @@ public class Main {
             if(command.isEmpty())continue;
             String commandSplit[] = command.split(" ");
 
-            if (command.equals("exit")) {
+            if (command.equalsIgnoreCase("exit")) {
                 break;
             } else if (command.startsWith("echo ")) {
 
@@ -22,16 +24,16 @@ public class Main {
             } else if (command.startsWith("type ")) {
                 String search = command.substring(5, command.length());
                 System.out.println(search + type(search));
-            } 
-
-            //"If the command exists somewhere in PATH, execute that command as a real program.
-            else if (getCommandPath(commandSplit[0])!=null) {
+            } else if (getCommandPath(commandSplit[0])!=null) { //"If the command exists somewhere in PATH, execute that command as a real program
 
                 // inheritIO It tells the child process: "Use the same input/output/error streams as my Java shell."
                 Process process = new ProcessBuilder(commandSplit).inheritIO().start();
                 process.waitFor();
 
-            } else {
+            } else if(command.equalsIgnoreCase("pwd")) { // Present working directory
+                System.out.println(currentDirectory);
+            }      
+            else {
                 System.out.println(command + ": command not found");
             }
         }
@@ -46,7 +48,7 @@ public class Main {
         String allPath = System.getenv("PATH");
         String[] pathDir = allPath.split(File.pathSeparator);
         for(String s : builin){
-            if(s.equals(command)) return " is a shell builtin";
+            if(s.equalsIgnoreCase(command)) return " is a shell builtin";
         }
 
         String path = getCommandPath(command);
