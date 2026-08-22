@@ -44,7 +44,7 @@ public class Main {
 
     public static String type(String command){
       
-        String[] builin = {"exit","echo", "type"};
+        String[] builin = {"exit","echo", "type", "pwd"};
         String allPath = System.getenv("PATH");
         String[] pathDir = allPath.split(File.pathSeparator);
         for(String s : builin){
