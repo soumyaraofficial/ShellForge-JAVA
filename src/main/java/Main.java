@@ -44,7 +44,7 @@ public class Main {
         }
 
         String path = getCommandPath(command);
-        if(path!=null)return path;
+        if(path!=null) return " is " + path;
 
         return ": not found";
     }
