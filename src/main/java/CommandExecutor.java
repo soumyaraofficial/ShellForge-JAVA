@@ -16,7 +16,8 @@ public class CommandExecutor {
                 System.out.println(currentDirectory);
                 return currentDirectory;
             case "cd":
-                return executeCd(commandSplit[1]);
+                Path path =  executeCd(commandSplit[1]);
+                return path == null ? currentDirectory : path;
 
         }
 
@@ -35,7 +36,13 @@ public class CommandExecutor {
     }
 
     private Path executeCd(String command) {
-        return Path.of(command);
+        Path path = Path.of(command);
+
+        if (!java.nio.file.Files.isDirectory(path)) {
+            System.out.println("cd: " + command + ": No such file or directory");
+            return null;
+        }
+        return path;
     }
 
     // Echo command
