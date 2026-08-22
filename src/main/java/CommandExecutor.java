@@ -38,7 +38,7 @@ public class CommandExecutor {
 
     private Path executeCd(String command,Path currentDirectory) {
         if(command.equals("~")){
-            Path path =Path.of(System.getProperty("user.home"));
+            Path path =Path.of(System.getenv("HOME"));
             return path;
         }
 
