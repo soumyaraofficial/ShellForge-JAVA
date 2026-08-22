@@ -22,7 +22,12 @@ public class Main {
             } else if (command.startsWith("type ")) {
                 String search = command.substring(5, command.length());
                 System.out.println(search + type(search));
-            } else if (getCommandPath(commandSplit[0])!=null) {
+            } 
+
+            //"If the command exists somewhere in PATH, execute that command as a real program.
+            else if (getCommandPath(commandSplit[0])!=null) {
+
+                // inheritIO It tells the child process: "Use the same input/output/error streams as my Java shell."
                 Process process = new ProcessBuilder(commandSplit).inheritIO().start();
                 process.waitFor();
 
@@ -32,6 +37,7 @@ public class Main {
         }
     }
 
+
     //will search the directories if the command is present or not. 
 
     public static String type(String command){
@@ -40,7 +46,7 @@ public class Main {
         String allPath = System.getenv("PATH");
         String[] pathDir = allPath.split(File.pathSeparator);
         for(String s : builin){
-            if(s.equals(command))return " is a shell builtin";
+            if(s.equals(command)) return " is a shell builtin";
         }
 
         String path = getCommandPath(command);
@@ -49,6 +55,7 @@ public class Main {
         return ": not found";
     }
 
+    // getting command paths
     public static String getCommandPath(String command){
      String paths = System.getenv("PATH");
      String pathDir[] = paths.split(File.pathSeparator);
