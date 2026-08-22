@@ -1,101 +1,77 @@
+import java.io.File;
 import java.nio.file.Path;
 
 public class CommandExecutor {
+    public Path execute(String command, Path currentDirectory) throws Exception {
 
-    public Path execute(String input, Path currentDirectory) throws Exception {
+        String[] commandSplit = command.trim().split("\\s+");
+        switch (commandSplit[0]) {
+            case "echo":
+                executeEcho(command);
+                return currentDirectory;
+            case "type":
+                executeType(command);
+                return currentDirectory;
+            case "pwd":
+                System.out.println(currentDirectory);
+                return currentDirectory;
+            case "cd":
+                return executeCd(commandSplit[1]);
 
-        String[] parts = input.split(" ");
-        String command = parts[0];
-
-        if (command.equals("exit")) {
-            System.exit(0);
         }
 
-        if (command.equals("echo")) {
-            System.out.println(input.substring(5));
-            return currentDirectory;
-        }
-
-        if (command.equals("pwd")) {
-            System.out.println(currentDirectory);
-            return currentDirectory;
-        }
-
-        if (command.equals("type")) {
-            System.out.println(parts[1] + type(parts[1]));
-            return currentDirectory;
-        }
-
-        if (command.equals("cd")) {
-            return changeDirectory(parts[1], currentDirectory);
-        }
-
-        String commandPath = getCommandPath(command);
-
-        if (commandPath != null) {
-
-            Process process = new ProcessBuilder(parts)
-                    .directory(currentDirectory.toFile())
-                    .inheritIO()
-                    .start();
-
+        if (getCommandPath(commandSplit[0]) != null) {
+            // "If the command exists somewhere in PATH, execute that command as a real
+            // program
+            // inheritIO It tells the child process: "Use the same input/output/error
+            // streams as my Java shell."
+            Process process = new ProcessBuilder(commandSplit).inheritIO().start();
             process.waitFor();
 
-            return currentDirectory;
+        } else {
+            System.out.println(command + ": command not found");
         }
-
-        System.out.println(command + ": command not found");
-
         return currentDirectory;
     }
 
-    private Path changeDirectory(String directory, Path currentDirectory) {
-
-        Path newDirectory = currentDirectory
-                .resolve(directory)
-                .normalize();
-
-        if (!newDirectory.toFile().isDirectory()) {
-            System.out.println("cd: " + directory + ": No such file or directory");
-            return currentDirectory;
-        }
-
-        return newDirectory.toAbsolutePath();
+    private Path executeCd(String command) {
+        return Path.of(command);
     }
 
-    private String type(String command) {
+    // Echo command
+    private void executeEcho(String command) {
+        System.out.println(command.substring(5, command.length()));
+    }
 
-        if (command.equals("exit")
-                || command.equals("echo")
-                || command.equals("pwd")
-                || command.equals("type")
-                || command.equals("cd")) {
+    private void executeType(String command) {
+        String search = command.substring(5, command.length());
+        System.out.println(search + type(search));
+    }
 
-            return " is a shell builtin";
+    // checking builtin type or external command
+    public static String type(String command) {
+        String[] builin = { "exit", "echo", "type", "pwd" };
+        for (String s : builin) {
+            if (s.equalsIgnoreCase(command))
+                return " is a shell builtin";
         }
-
         String path = getCommandPath(command);
-
-        if (path != null) {
+        if (path != null)
             return " is " + path;
-        }
 
         return ": not found";
     }
 
-    private String getCommandPath(String command) {
-
-        String path = System.getenv("PATH");
-
-        for (String directory : path.split(java.io.File.pathSeparator)) {
-
-            java.io.File file = new java.io.File(directory, command);
-
-            if (file.exists() && file.canExecute()) {
+    // getting command paths
+    public static String getCommandPath(String command) {
+        String paths = System.getenv("PATH");
+        String pathDir[] = paths.split(File.pathSeparator);
+        for (String dir : pathDir) {
+            File file = new File(dir, command);
+            if (file.exists() && file.canExecute())
                 return file.getAbsolutePath();
-            }
         }
-
         return null;
     }
+
 }

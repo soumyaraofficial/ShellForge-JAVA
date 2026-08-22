@@ -6,6 +6,8 @@ public class Shell {
     private final Scanner scanner = new Scanner(System.in);
     private final CommandExecutor executor = new CommandExecutor();
 
+
+
     private Path currentDirectory = Path.of("").toAbsolutePath();
 
     public void run() throws Exception {
@@ -21,7 +23,7 @@ public class Shell {
             }
             if(command.equalsIgnoreCase("EXIT"))break;
 
-         executor.execute(command, currentDirectory);
+        currentDirectory =  executor.execute(command, currentDirectory);
         }
     }
 }
