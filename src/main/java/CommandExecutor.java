@@ -1,4 +1,5 @@
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class CommandExecutor {
@@ -38,7 +39,7 @@ public class CommandExecutor {
     private Path executeCd(String command) {
         Path path = Path.of(command);
 
-        if (!java.nio.file.Files.isDirectory(path)) {
+        if (!Files.isDirectory(path)) {
             System.out.println("cd: " + command + ": No such file or directory");
             return null;
         }
