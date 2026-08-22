@@ -17,7 +17,7 @@ public class CommandExecutor {
                 System.out.println(currentDirectory);
                 return currentDirectory;
             case "cd":
-                Path path =  executeCd(commandSplit[1]);
+                Path path =  executeCd(commandSplit[1],currentDirectory);
                 return path == null ? currentDirectory : path;
 
         }
@@ -36,13 +36,24 @@ public class CommandExecutor {
         return currentDirectory;
     }
 
-    private Path executeCd(String command) {
-        Path path = Path.of(command);
+    private Path executeCd(String command,Path currentDirectory) {
+        if(command.equals("~")){
+            Path path =Path.of(System.getProperty("user.home"));
+            return path;
+        }
 
+
+        Path path = Path.of(command);
+        
+        if(!path.isAbsolute()){ 
+          path = currentDirectory.resolve(command).normalize();
+        }
+      
         if (!Files.isDirectory(path)) {
             System.out.println("cd: " + command + ": No such file or directory");
             return null;
         }
+      
         return path;
     }
 
