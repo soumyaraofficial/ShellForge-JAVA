@@ -31,18 +31,19 @@ public class Quoting {
         return args;
     }
 
+    
     public void executeEcho(List<String> commandSplit) {
-       boolean isfirst = true;
-       StringBuilder string = new StringBuilder();
-       for(String s : commandSplit){
-           if(isfirst){
-            isfirst = false;
-           }else{
-               string.append(s);
-               string.append(" ");
-           }
-       }
-       System.out.println(string.toString());
+        StringBuilder string = new StringBuilder();
+    
+        for (int i = 1; i < commandSplit.size(); i++) {
+            if (i > 1) {
+                string.append(" ");
+            }
+    
+            string.append(commandSplit.get(i));
+        }
+    
+        System.out.println(string);
     }
 
 }
