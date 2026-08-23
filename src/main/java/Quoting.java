@@ -6,11 +6,10 @@ public class Quoting {
     public List<String> parser(String command) {
         List<String> args = new ArrayList<>();
         StringBuilder current = new StringBuilder();
-
         boolean inSingleQuote = false;
         boolean inDoubleQuote = false;
         boolean escaped = false;
-
+    
         for (char c : command.toCharArray()) {
             if (escaped) {
                 // Treat the current character as a literal character
@@ -36,7 +35,7 @@ public class Quoting {
                 current.append(c);
             }
         }
-        
+
         if (current.length() > 0) {
             args.add(current.toString());
         }
