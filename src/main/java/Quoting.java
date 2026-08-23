@@ -3,43 +3,73 @@ import java.util.List;
 
 public class Quoting {
 
-    public List<String> parser(String command) {
+    public static List<String> parseCommand(String command) {
         List<String> args = new ArrayList<>();
         StringBuilder current = new StringBuilder();
+    
         boolean inSingleQuote = false;
         boolean inDoubleQuote = false;
         boolean escaped = false;
     
-        for (char c : command.toCharArray()) {
+        char[] chars = command.toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+            char c = chars[i];
+    
             if (escaped) {
-                // Treat the current character as a literal character
+                // Unquoted backslash: treat c as a literal character
                 current.append(c);
                 escaped = false;
-            } else if (c == '\\' && !inSingleQuote && !inDoubleQuote) {
-                // Enable escaped mode for the next character outside quotes
+            } else if (inDoubleQuote) {
+                if (c == '\\') {
+                    // Peek at the next character inside double quotes
+                    if (i + 1 < chars.length) {
+                        char next = chars[i + 1];
+                        if (next == '"' || next == '\\') {
+                            // Skip backslash and append the escaped character in next iteration
+                            escaped = true;
+                            continue;
+                        }
+                    }
+                    // Backslash followed by anything else inside double quotes is literal
+                    current.append(c);
+                } else if (c == '"') {
+                    // Exit double quotes
+                    inDoubleQuote = false;
+                } else {
+                    current.append(c);
+                }
+            } else if (inSingleQuote) {
+                if (c == '\'') {
+                    // Exit single quotes
+                    inSingleQuote = false;
+                } else {
+                    // Single quotes preserve EVERY character literally (including \)
+                    current.append(c);
+                }
+            } else if (c == '\\') {
+                // Backslash outside quotes
                 escaped = true;
-            } else if (c == '\'' && !inDoubleQuote) {
-                // Toggle single quote mode
-                inSingleQuote = !inSingleQuote;
-            } else if (c == '"' && !inSingleQuote) {
-                // Toggle double quote mode
-                inDoubleQuote = !inDoubleQuote;
-            } else if (Character.isWhitespace(c) && !inSingleQuote && !inDoubleQuote) {
+            } else if (c == '\'') {
+                // Enter single quotes
+                inSingleQuote = true;
+            } else if (c == '"') {
+                // Enter double quotes
+                inDoubleQuote = true;
+            } else if (Character.isWhitespace(c)) {
                 // Split arguments on unquoted, unescaped whitespace
                 if (current.length() > 0) {
                     args.add(current.toString());
                     current.setLength(0);
                 }
             } else {
-                // Append regular character
                 current.append(c);
             }
         }
-
+    
         if (current.length() > 0) {
             args.add(current.toString());
         }
-
+    
         return args;
     }
 
