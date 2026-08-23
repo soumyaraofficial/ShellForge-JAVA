@@ -12,14 +12,22 @@ public class CommandExecutor {
         PrintStream output = System.out;
         int redirectIndex = -1;
         String redirectFile = null;
-        
+        int errorRedirectIndex = -1;
+        String errorRedirectFile = null;
+      
+        PrintStream errorOutput = System.err;
         for (int i = 0; i < commandSplit.size(); i++) {
+
             if (commandSplit.get(i).equals(">") ||
                 commandSplit.get(i).equals("1>")) {
         
                 redirectIndex = i;
                 redirectFile = commandSplit.get(i + 1);
-                break;
+        
+            } else if (commandSplit.get(i).equals("2>")) {
+        
+                errorRedirectIndex = i;
+                errorRedirectFile = commandSplit.get(i + 1);
             }
         }
         
@@ -46,6 +54,7 @@ public class CommandExecutor {
         }
 
         if (getCommandPath(commandSplit.get(0)) != null) {
+
             ProcessBuilder processBuilder = new ProcessBuilder(commandSplit);
 
             if (redirectFile != null) {
@@ -53,7 +62,12 @@ public class CommandExecutor {
             } else {
                 processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
             }
-
+            
+            if (errorRedirectFile != null) {
+                processBuilder.redirectError(new File(errorRedirectFile));
+            } else {
+                processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT);
+            }
             processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT);
 
             Process process = processBuilder.start();
