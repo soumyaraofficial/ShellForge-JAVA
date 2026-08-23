@@ -6,7 +6,7 @@ import java.util.List;
 public class CommandExecutor {
     public Path execute(String command, Path currentDirectory) throws Exception {
 
-        List<String> commandSplit = new Quoting().parser(command);
+        List<String> commandSplit = new Quoting().parseCommand(command);
         switch (commandSplit.get(0)) {
             case "echo":
                 new Quoting().executeEcho(commandSplit);
