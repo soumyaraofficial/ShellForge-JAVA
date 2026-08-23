@@ -1,14 +1,15 @@
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 public class CommandExecutor {
     public Path execute(String command, Path currentDirectory) throws Exception {
 
-        String[] commandSplit = command.trim().split("\\s+");
-        switch (commandSplit[0]) {
+        List<String> commandSplit = new Quoting().parser(command);
+        switch (commandSplit.get(0)) {
             case "echo":
-                new Quoting().executeEcho(command.substring(5,command.length()));
+                new Quoting().executeEcho(commandSplit);
                 return currentDirectory;
             case "type":
                 executeType(command);
@@ -17,12 +18,12 @@ public class CommandExecutor {
                 System.out.println(currentDirectory);
                 return currentDirectory;
             case "cd":
-                Path path =  executeCd(commandSplit[1],currentDirectory);
+                Path path =  executeCd(commandSplit.get(1),currentDirectory);
                 return path == null ? currentDirectory : path;
 
         }
 
-        if (getCommandPath(commandSplit[0]) != null) {
+        if (getCommandPath(commandSplit.get(0)) != null) {
             // "If the command exists somewhere in PATH, execute that command as a real
             // program
             // inheritIO It tells the child process: "Use the same input/output/error
