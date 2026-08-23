@@ -10,13 +10,20 @@ public class CommandExecutor {
         List<String> commandSplit = Quoting.parseCommand(command);
 
         PrintStream output = System.out;
-
-        int redirectIndex = commandSplit.indexOf(">");
-    
+        int redirectIndex = -1;
         String redirectFile = null;
-
+        
+        for (int i = 0; i < commandSplit.size(); i++) {
+            if (commandSplit.get(i).equals(">") ||
+                commandSplit.get(i).equals("1>")) {
+        
+                redirectIndex = i;
+                redirectFile = commandSplit.get(i + 1);
+                break;
+            }
+        }
+        
         if (redirectIndex != -1) {
-            redirectFile = commandSplit.get(redirectIndex + 1);
             commandSplit = commandSplit.subList(0, redirectIndex);
         }
 
