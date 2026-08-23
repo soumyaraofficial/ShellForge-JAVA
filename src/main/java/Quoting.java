@@ -1,3 +1,4 @@
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -92,18 +93,23 @@ public class Quoting {
     // }
     // }
 
-    public void executeEcho(List<String> commandSplit) {
+    public void executeEcho(List<String> commandSplit, PrintStream output) {
         StringBuilder string = new StringBuilder();
-
+    
         for (int i = 1; i < commandSplit.size(); i++) {
+    
+            if (commandSplit.get(i).equals(">")) {
+                break;
+            }
+    
             if (i > 1) {
                 string.append(" ");
             }
-
+    
             string.append(commandSplit.get(i));
         }
-
-        System.out.println(string);
+    
+       output.println(string);
     }
 
 }

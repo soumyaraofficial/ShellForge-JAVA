@@ -2,20 +2,34 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-
+import java.io.PrintStream;
 public class CommandExecutor {
     public Path execute(String command, Path currentDirectory) throws Exception {
 
-        List<String> commandSplit = new Quoting().parseCommand(command);
+        new Quoting();
+        List<String> commandSplit = Quoting.parseCommand(command);
+
+        PrintStream output = System.out;
+
+        int redirectIndex = commandSplit.indexOf(">");
+    
+        String redirectFile = null;
+
+        if (redirectIndex != -1) {
+            redirectFile = commandSplit.get(redirectIndex + 1);
+            commandSplit = commandSplit.subList(0, redirectIndex);
+        }
+
+
         switch (commandSplit.get(0)) {
             case "echo":
-                new Quoting().executeEcho(commandSplit);
+                new Quoting().executeEcho(commandSplit, output);
                 return currentDirectory;
             case "type":
-                executeType(command);
+                executeType(command, output);
                 return currentDirectory;
             case "pwd":
-                System.out.println(currentDirectory);
+                output.println(currentDirectory);
                 return currentDirectory;
             case "cd":
                 Path path =  executeCd(commandSplit.get(1),currentDirectory);
@@ -24,11 +38,17 @@ public class CommandExecutor {
         }
 
         if (getCommandPath(commandSplit.get(0)) != null) {
-            // "If the command exists somewhere in PATH, execute that command as a real
-            // program
-            // inheritIO It tells the child process: "Use the same input/output/error
-            // streams as my Java shell."
-            Process process = new ProcessBuilder(commandSplit).inheritIO().start();
+            ProcessBuilder processBuilder = new ProcessBuilder(commandSplit);
+
+            if (redirectFile != null) {
+                processBuilder.redirectOutput(new File(redirectFile));
+            } else {
+                processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+            }
+
+            processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT);
+
+            Process process = processBuilder.start();
             process.waitFor();
 
         } else {
@@ -63,9 +83,9 @@ public class CommandExecutor {
     //     System.out.println(command.substring(5, command.length()));
     // }
 
-    private void executeType(String command) {
+    private void executeType(String command, PrintStream output) {
         String search = command.substring(5, command.length());
-        System.out.println(search + type(search));
+        output.println(search+type(search));
     }
 
     // checking builtin type or external command
