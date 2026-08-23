@@ -8,7 +8,7 @@ public class CommandExecutor {
         String[] commandSplit = command.trim().split("\\s+");
         switch (commandSplit[0]) {
             case "echo":
-                executeEcho(command);
+                new Quoting().executeEcho(command.substring(5,command.length()));
                 return currentDirectory;
             case "type":
                 executeType(command);
@@ -58,9 +58,9 @@ public class CommandExecutor {
     }
 
     // Echo command
-    private void executeEcho(String command) {
-        System.out.println(command.substring(5, command.length()));
-    }
+    // private void executeEcho(String command) {
+    //     System.out.println(command.substring(5, command.length()));
+    // }
 
     private void executeType(String command) {
         String search = command.substring(5, command.length());
