@@ -98,10 +98,6 @@ public class Quoting {
     
         for (int i = 1; i < commandSplit.size(); i++) {
     
-            if (commandSplit.get(i).equals(">")) {
-                break;
-            }
-    
             if (i > 1) {
                 string.append(" ");
             }
@@ -109,7 +105,7 @@ public class Quoting {
             string.append(commandSplit.get(i));
         }
     
-       output.println(string);
+        output.println(string);
     }
 
 }

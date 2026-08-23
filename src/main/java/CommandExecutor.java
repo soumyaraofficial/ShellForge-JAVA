@@ -24,6 +24,7 @@ public class CommandExecutor {
         }
         
         if (redirectIndex != -1) {
+            output = new PrintStream(redirectFile);
             commandSplit = commandSplit.subList(0, redirectIndex);
         }
 
