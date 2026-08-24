@@ -19,11 +19,13 @@ public class Quoting {
 
             char c = chars[i];
 
-            // ==========================================
+            // =====================================================
             // INSIDE DOUBLE QUOTES
-            // ==========================================
+            // =====================================================
+
             if (inDoubleQuote) {
 
+                // Backslash inside double quotes
                 if (c == '\\') {
 
                     if (i + 1 < chars.length) {
@@ -36,59 +38,86 @@ public class Quoting {
                          * \" -> "
                          * \\ -> \
                          *
-                         * Other backslashes remain literal.
+                         * For any other character, the backslash
+                         * remains literal.
                          */
                         if (next == '"' || next == '\\') {
+
                             current.append(next);
-                            argumentStarted = true;
+
                             i++;
-                            continue;
+
+                        } else {
+
+                            current.append('\\');
                         }
+
+                    } else {
+
+                        // Backslash at the end
+                        current.append('\\');
                     }
 
-                    // Backslash before any other character
-                    // remains a literal backslash.
-                    current.append('\\');
                     argumentStarted = true;
 
-                } else if (c == '"') {
+                }
 
-                    // End of double-quoted section
+                // Closing double quote
+                else if (c == '"') {
+
                     inDoubleQuote = false;
                     argumentStarted = true;
 
-                } else {
+                }
+
+                // Normal character
+                else {
 
                     current.append(c);
                     argumentStarted = true;
                 }
-
             }
 
-            // ==========================================
+            // =====================================================
             // INSIDE SINGLE QUOTES
-            // ==========================================
+            // =====================================================
+
             else if (inSingleQuote) {
+
+                /*
+                 * Everything is literal inside single quotes.
+                 *
+                 * Example:
+                 *
+                 * 'hello\world'
+                 *
+                 * becomes:
+                 *
+                 * hello\world
+                 */
 
                 if (c == '\'') {
 
-                    // End of single-quoted section
+                    // Closing single quote
                     inSingleQuote = false;
                     argumentStarted = true;
 
                 } else {
 
-                    // Everything is literal inside single quotes
                     current.append(c);
                     argumentStarted = true;
                 }
-
             }
 
-            // ==========================================
+            // =====================================================
             // OUTSIDE QUOTES
-            // ==========================================
+            // =====================================================
+
             else {
+
+                // -------------------------------------------------
+                // BACKSLASH OUTSIDE QUOTES
+                // -------------------------------------------------
 
                 if (c == '\\') {
 
@@ -96,40 +125,81 @@ public class Quoting {
                      * Outside quotes:
                      *
                      * \x -> x
+                     *
+                     * Examples:
+                     *
+                     * hello\ world
+                     * -> hello world
+                     *
+                     * hello\"
+                     * -> hello"
+                     *
+                     * hello\\
+                     * -> hello\
                      */
+
                     if (i + 1 < chars.length) {
-                        current.append(chars[++i]);
+
+                        current.append(chars[i + 1]);
+
+                        i++;
+
+                        argumentStarted = true;
+
+                    } else {
+
+                        // Literal trailing backslash
+                        current.append('\\');
                         argumentStarted = true;
                     }
+                }
 
-                } else if (c == '\'') {
+                // -------------------------------------------------
+                // START SINGLE QUOTE
+                // -------------------------------------------------
 
-                    // Start single-quoted section
+                else if (c == '\'') {
+
                     inSingleQuote = true;
                     argumentStarted = true;
+                }
 
-                } else if (c == '"') {
+                // -------------------------------------------------
+                // START DOUBLE QUOTE
+                // -------------------------------------------------
 
-                    // Start double-quoted section
+                else if (c == '"') {
+
                     inDoubleQuote = true;
                     argumentStarted = true;
+                }
 
-                } else if (Character.isWhitespace(c)) {
+                // -------------------------------------------------
+                // WHITESPACE
+                // -------------------------------------------------
+
+                else if (Character.isWhitespace(c)) {
 
                     /*
-                     * Space separates arguments,
-                     * but only if we have actually started
-                     * an argument.
+                     * Whitespace separates arguments only when
+                     * an argument has already started.
                      */
+
                     if (argumentStarted) {
 
                         args.add(current.toString());
 
                         current.setLength(0);
+
                         argumentStarted = false;
                     }
+                }
 
-                } else {
+                // -------------------------------------------------
+                // NORMAL CHARACTER
+                // -------------------------------------------------
+
+                else {
 
                     current.append(c);
                     argumentStarted = true;
@@ -137,16 +207,25 @@ public class Quoting {
             }
         }
 
-        // Add final argument
+        // =========================================================
+        // ADD FINAL ARGUMENT
+        // =========================================================
+
         if (argumentStarted) {
+
             args.add(current.toString());
         }
 
         return args;
     }
 
+    // =============================================================
+    // ECHO
+    // =============================================================
 
-    public void executeEcho(List<String> commandSplit, PrintStream output) {
+    public void executeEcho(
+            List<String> commandSplit,
+            PrintStream output) {
 
         StringBuilder string = new StringBuilder();
 

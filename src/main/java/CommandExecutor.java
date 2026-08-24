@@ -7,9 +7,12 @@ import java.util.List;
 
 public class CommandExecutor {
 
-    public Path execute(String command, Path currentDirectory) throws Exception {
+    public Path execute(
+            String command,
+            Path currentDirectory) throws Exception {
 
-        List<String> commandSplit = Quoting.parseCommand(command);
+        List<String> commandSplit =
+                Quoting.parseCommand(command);
 
         if (commandSplit.isEmpty()) {
             return currentDirectory;
@@ -27,140 +30,231 @@ public class CommandExecutor {
         int appendIndex = -1;
         int errorAppendIndex = -1;
 
-        // Find redirection operators
+        // =========================================================
+        // FIND REDIRECTION OPERATORS
+        // =========================================================
+
         for (int i = 0; i < commandSplit.size(); i++) {
 
             String token = commandSplit.get(i);
 
+            // -----------------------------------------------------
+            // STDOUT REDIRECTION
+            // -----------------------------------------------------
+
             if (token.equals(">") || token.equals("1>")) {
 
                 redirectIndex = i;
-                redirectFile = commandSplit.get(i + 1);
 
-            } else if (token.equals("2>")) {
+                if (i + 1 < commandSplit.size()) {
+                    redirectFile = commandSplit.get(i + 1);
+                }
+            }
+
+            // -----------------------------------------------------
+            // STDERR REDIRECTION
+            // -----------------------------------------------------
+
+            else if (token.equals("2>")) {
 
                 errorRedirectIndex = i;
-                errorRedirectFile = commandSplit.get(i + 1);
 
-            } else if (token.equals(">>") || token.equals("1>>")) {
+                if (i + 1 < commandSplit.size()) {
+                    errorRedirectFile =
+                            commandSplit.get(i + 1);
+                }
+            }
+
+            // -----------------------------------------------------
+            // STDOUT APPEND
+            // -----------------------------------------------------
+
+            else if (token.equals(">>")
+                    || token.equals("1>>")) {
 
                 appendIndex = i;
-                redirectFile = commandSplit.get(i + 1);
 
-            } else if (token.equals("2>>")) {
+                if (i + 1 < commandSplit.size()) {
+                    redirectFile =
+                            commandSplit.get(i + 1);
+                }
+            }
+
+            // -----------------------------------------------------
+            // STDERR APPEND
+            // -----------------------------------------------------
+
+            else if (token.equals("2>>")) {
 
                 errorAppendIndex = i;
-                errorRedirectFile = commandSplit.get(i + 1);
+
+                if (i + 1 < commandSplit.size()) {
+                    errorRedirectFile =
+                            commandSplit.get(i + 1);
+                }
             }
         }
 
-        // Find the first redirection operator
+        // =========================================================
+        // FIND FIRST REDIRECTION
+        // =========================================================
+
         int firstRedirect = commandSplit.size();
 
         if (redirectIndex != -1) {
-            firstRedirect = Math.min(firstRedirect, redirectIndex);
+
+            firstRedirect =
+                    Math.min(firstRedirect, redirectIndex);
         }
 
         if (errorRedirectIndex != -1) {
-            firstRedirect = Math.min(firstRedirect, errorRedirectIndex);
+
+            firstRedirect =
+                    Math.min(firstRedirect, errorRedirectIndex);
         }
 
         if (appendIndex != -1) {
-            firstRedirect = Math.min(firstRedirect, appendIndex);
+
+            firstRedirect =
+                    Math.min(firstRedirect, appendIndex);
         }
 
         if (errorAppendIndex != -1) {
-            firstRedirect = Math.min(firstRedirect, errorAppendIndex);
+
+            firstRedirect =
+                    Math.min(firstRedirect, errorAppendIndex);
         }
 
-        // Arguments without redirection
-        List<String> cleanArgs = commandSplit.subList(0, firstRedirect);
+        // =========================================================
+        // REMOVE REDIRECTION PART
+        // =========================================================
+
+        List<String> cleanArgs =
+                commandSplit.subList(0, firstRedirect);
 
         if (cleanArgs.isEmpty()) {
             return currentDirectory;
         }
 
-        // ---------------------------------------------------------
-        // BUILT-IN OUTPUT REDIRECTION
-        // ---------------------------------------------------------
+        // =========================================================
+        // STDOUT REDIRECTION FOR BUILT-INS
+        // =========================================================
 
         if (redirectFile != null) {
 
-            File outFile = new File(redirectFile);
+            File outFile =
+                    new File(redirectFile);
 
             if (outFile.getParentFile() != null) {
+
                 outFile.getParentFile().mkdirs();
             }
 
             if (appendIndex != -1) {
 
-                // >>
                 output = new PrintStream(
-                        new FileOutputStream(outFile, true)
+                        new FileOutputStream(
+                                outFile,
+                                true
+                        )
                 );
 
             } else {
 
-                // >
                 output = new PrintStream(outFile);
             }
         }
 
-        // ---------------------------------------------------------
-        // BUILT-IN ERROR REDIRECTION
-        // ---------------------------------------------------------
+        // =========================================================
+        // STDERR REDIRECTION FOR BUILT-INS
+        // =========================================================
 
         if (errorRedirectFile != null) {
 
-            File errFile = new File(errorRedirectFile);
+            File errFile =
+                    new File(errorRedirectFile);
 
             if (errFile.getParentFile() != null) {
+
                 errFile.getParentFile().mkdirs();
             }
 
             if (errorAppendIndex != -1) {
 
-                // 2>>
                 errorOutput = new PrintStream(
-                        new FileOutputStream(errFile, true)
+                        new FileOutputStream(
+                                errFile,
+                                true
+                        )
                 );
 
             } else {
 
-                // 2>
-                errorOutput = new PrintStream(errFile);
+                errorOutput =
+                        new PrintStream(errFile);
             }
         }
 
-        // ---------------------------------------------------------
+        // =========================================================
         // BUILT-IN COMMANDS
-        // ---------------------------------------------------------
+        // =========================================================
 
         switch (cleanArgs.get(0)) {
 
+            // -----------------------------------------------------
+            // ECHO
+            // -----------------------------------------------------
+
             case "echo":
 
-                new Quoting().executeEcho(cleanArgs, output);
+                new Quoting().executeEcho(
+                        cleanArgs,
+                        output
+                );
 
-                closeRedirectedStreams(output, errorOutput);
+                closeRedirectedStreams(
+                        output,
+                        errorOutput
+                );
 
                 return currentDirectory;
+
+            // -----------------------------------------------------
+            // TYPE
+            // -----------------------------------------------------
 
             case "type":
 
-                executeType(cleanArgs, output);
+                executeType(
+                        cleanArgs,
+                        output
+                );
 
-                closeRedirectedStreams(output, errorOutput);
+                closeRedirectedStreams(
+                        output,
+                        errorOutput
+                );
 
                 return currentDirectory;
+
+            // -----------------------------------------------------
+            // PWD
+            // -----------------------------------------------------
 
             case "pwd":
 
                 output.println(currentDirectory);
 
-                closeRedirectedStreams(output, errorOutput);
+                closeRedirectedStreams(
+                        output,
+                        errorOutput
+                );
 
                 return currentDirectory;
+
+            // -----------------------------------------------------
+            // CD
+            // -----------------------------------------------------
 
             case "cd":
 
@@ -170,27 +264,34 @@ public class CommandExecutor {
                             "cd: missing argument"
                     );
 
-                    closeRedirectedStreams(output, errorOutput);
+                    closeRedirectedStreams(
+                            output,
+                            errorOutput
+                    );
 
                     return currentDirectory;
                 }
 
-                Path path = executeCd(
-                        cleanArgs.get(1),
-                        currentDirectory,
+                Path path =
+                        executeCd(
+                                cleanArgs.get(1),
+                                currentDirectory,
+                                errorOutput
+                        );
+
+                closeRedirectedStreams(
+                        output,
                         errorOutput
                 );
-
-                closeRedirectedStreams(output, errorOutput);
 
                 return path == null
                         ? currentDirectory
                         : path;
         }
 
-        // ---------------------------------------------------------
+        // =========================================================
         // EXTERNAL COMMANDS
-        // ---------------------------------------------------------
+        // =========================================================
 
         if (getCommandPath(cleanArgs.get(0)) != null) {
 
@@ -203,19 +304,22 @@ public class CommandExecutor {
 
             if (redirectFile != null) {
 
-                File outFile = new File(redirectFile);
+                File outFile =
+                        new File(redirectFile);
 
                 if (appendIndex != -1) {
 
-                    // >>
                     processBuilder.redirectOutput(
-                            ProcessBuilder.Redirect.appendTo(outFile)
+                            ProcessBuilder.Redirect.appendTo(
+                                    outFile
+                            )
                     );
 
                 } else {
 
-                    // >
-                    processBuilder.redirectOutput(outFile);
+                    processBuilder.redirectOutput(
+                            outFile
+                    );
                 }
 
             } else {
@@ -231,19 +335,22 @@ public class CommandExecutor {
 
             if (errorRedirectFile != null) {
 
-                File errFile = new File(errorRedirectFile);
+                File errFile =
+                        new File(errorRedirectFile);
 
                 if (errorAppendIndex != -1) {
 
-                    // 2>>
                     processBuilder.redirectError(
-                            ProcessBuilder.Redirect.appendTo(errFile)
+                            ProcessBuilder.Redirect.appendTo(
+                                    errFile
+                            )
                     );
 
                 } else {
 
-                    // 2>
-                    processBuilder.redirectError(errFile);
+                    processBuilder.redirectError(
+                            errFile
+                    );
                 }
 
             } else {
@@ -253,26 +360,38 @@ public class CommandExecutor {
                 );
             }
 
-            Process process = processBuilder.start();
+            Process process =
+                    processBuilder.start();
 
             process.waitFor();
 
         } else {
 
-            // Command not found goes to stderr
+            // -----------------------------------------------------
+            // COMMAND NOT FOUND
+            // -----------------------------------------------------
+
             errorOutput.println(
-                    cleanArgs.get(0) + ": command not found"
+                    cleanArgs.get(0)
+                            + ": command not found"
             );
         }
 
-        closeRedirectedStreams(output, errorOutput);
+        // =========================================================
+        // CLOSE REDIRECTED STREAMS
+        // =========================================================
+
+        closeRedirectedStreams(
+                output,
+                errorOutput
+        );
 
         return currentDirectory;
     }
 
-    // -------------------------------------------------------------
+    // =============================================================
     // CLOSE REDIRECTED STREAMS
-    // -------------------------------------------------------------
+    // =============================================================
 
     private void closeRedirectedStreams(
             PrintStream output,
@@ -287,21 +406,26 @@ public class CommandExecutor {
         }
     }
 
-    // -------------------------------------------------------------
+    // =============================================================
     // CD COMMAND
-    // -------------------------------------------------------------
+    // =============================================================
 
     private Path executeCd(
             String command,
             Path currentDirectory,
             PrintStream errorOutput) {
 
+        // ---------------------------------------------------------
         // cd ~
+        // ---------------------------------------------------------
+
         if (command.equals("~")) {
 
-            String home = System.getenv("HOME");
+            String home =
+                    System.getenv("HOME");
 
             if (home == null) {
+
                 errorOutput.println(
                         "cd: HOME not set"
                 );
@@ -312,9 +436,17 @@ public class CommandExecutor {
             return Path.of(home);
         }
 
-        Path path = Path.of(command);
+        // ---------------------------------------------------------
+        // CREATE PATH
+        // ---------------------------------------------------------
 
-        // Relative path
+        Path path =
+                Path.of(command);
+
+        // ---------------------------------------------------------
+        // RELATIVE PATH
+        // ---------------------------------------------------------
+
         if (!path.isAbsolute()) {
 
             path = currentDirectory
@@ -322,11 +454,15 @@ public class CommandExecutor {
                     .normalize();
         }
 
-        // Directory doesn't exist
+        // ---------------------------------------------------------
+        // DIRECTORY DOES NOT EXIST
+        // ---------------------------------------------------------
+
         if (!Files.isDirectory(path)) {
 
             errorOutput.println(
-                    "cd: " + command
+                    "cd: "
+                            + command
                             + ": No such file or directory"
             );
 
@@ -336,9 +472,9 @@ public class CommandExecutor {
         return path;
     }
 
-    // -------------------------------------------------------------
+    // =============================================================
     // TYPE COMMAND
-    // -------------------------------------------------------------
+    // =============================================================
 
     private void executeType(
             List<String> args,
@@ -353,18 +489,21 @@ public class CommandExecutor {
             return;
         }
 
-        String search = args.get(1);
+        String search =
+                args.get(1);
 
         output.println(
-                search + type(search)
+                search
+                        + type(search)
         );
     }
 
-    // -------------------------------------------------------------
-    // CHECK BUILTIN OR EXTERNAL COMMAND
-    // -------------------------------------------------------------
+    // =============================================================
+    // CHECK BUILT-IN OR EXTERNAL COMMAND
+    // =============================================================
 
-    public static String type(String command) {
+    public static String type(
+            String command) {
 
         String[] builtin = {
                 "exit",
@@ -377,26 +516,31 @@ public class CommandExecutor {
         for (String s : builtin) {
 
             if (s.equalsIgnoreCase(command)) {
+
                 return " is a shell builtin";
             }
         }
 
-        String path = getCommandPath(command);
+        String path =
+                getCommandPath(command);
 
         if (path != null) {
+
             return " is " + path;
         }
 
         return ": not found";
     }
 
-    // -------------------------------------------------------------
+    // =============================================================
     // GET EXTERNAL COMMAND PATH
-    // -------------------------------------------------------------
+    // =============================================================
 
-    public static String getCommandPath(String command) {
+    public static String getCommandPath(
+            String command) {
 
-        String paths = System.getenv("PATH");
+        String paths =
+                System.getenv("PATH");
 
         if (paths == null) {
             return null;
@@ -407,9 +551,11 @@ public class CommandExecutor {
 
         for (String dir : pathDirs) {
 
-            File file = new File(dir, command);
+            File file =
+                    new File(dir, command);
 
-            if (file.exists() && file.canExecute()) {
+            if (file.exists()
+                    && file.canExecute()) {
 
                 return file.getAbsolutePath();
             }
