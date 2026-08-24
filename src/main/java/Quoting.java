@@ -8,134 +8,157 @@ public class Quoting {
 
         List<String> args = new ArrayList<>();
         StringBuilder current = new StringBuilder();
-    
+
         boolean inSingleQuote = false;
         boolean inDoubleQuote = false;
-    
+        boolean argumentStarted = false;
+
         char[] chars = command.toCharArray();
-    
+
         for (int i = 0; i < chars.length; i++) {
-    
+
             char c = chars[i];
-    
-            // -------------------------
-            // Inside double quotes
-            // -------------------------
+
+            // ==========================================
+            // INSIDE DOUBLE QUOTES
+            // ==========================================
             if (inDoubleQuote) {
-    
+
                 if (c == '\\') {
-    
+
                     if (i + 1 < chars.length) {
-    
+
                         char next = chars[i + 1];
-    
-                        // Inside double quotes,
-                        // only " and \ are escaped
+
+                        /*
+                         * Inside double quotes:
+                         *
+                         * \" -> "
+                         * \\ -> \
+                         *
+                         * Other backslashes remain literal.
+                         */
                         if (next == '"' || next == '\\') {
                             current.append(next);
+                            argumentStarted = true;
                             i++;
                             continue;
                         }
                     }
-    
-                    // Backslash before anything else
-                    // remains literal
+
+                    // Backslash before any other character
+                    // remains a literal backslash.
                     current.append('\\');
-    
+                    argumentStarted = true;
+
                 } else if (c == '"') {
-    
+
+                    // End of double-quoted section
                     inDoubleQuote = false;
-    
+                    argumentStarted = true;
+
                 } else {
-    
+
                     current.append(c);
+                    argumentStarted = true;
                 }
-    
-            // -------------------------
-            // Inside single quotes
-            // -------------------------
-            } else if (inSingleQuote) {
-    
+
+            }
+
+            // ==========================================
+            // INSIDE SINGLE QUOTES
+            // ==========================================
+            else if (inSingleQuote) {
+
                 if (c == '\'') {
+
+                    // End of single-quoted section
                     inSingleQuote = false;
+                    argumentStarted = true;
+
                 } else {
+
+                    // Everything is literal inside single quotes
                     current.append(c);
+                    argumentStarted = true;
                 }
-    
-            // -------------------------
-            // Outside quotes
-            // -------------------------
-            } else {
-    
+
+            }
+
+            // ==========================================
+            // OUTSIDE QUOTES
+            // ==========================================
+            else {
+
                 if (c == '\\') {
-    
+
+                    /*
+                     * Outside quotes:
+                     *
+                     * \x -> x
+                     */
                     if (i + 1 < chars.length) {
                         current.append(chars[++i]);
+                        argumentStarted = true;
                     }
-    
+
                 } else if (c == '\'') {
-    
+
+                    // Start single-quoted section
                     inSingleQuote = true;
-    
+                    argumentStarted = true;
+
                 } else if (c == '"') {
-    
+
+                    // Start double-quoted section
                     inDoubleQuote = true;
-    
+                    argumentStarted = true;
+
                 } else if (Character.isWhitespace(c)) {
-    
-                    if (current.length() > 0) {
+
+                    /*
+                     * Space separates arguments,
+                     * but only if we have actually started
+                     * an argument.
+                     */
+                    if (argumentStarted) {
+
                         args.add(current.toString());
+
                         current.setLength(0);
+                        argumentStarted = false;
                     }
-    
+
                 } else {
-    
+
                     current.append(c);
+                    argumentStarted = true;
                 }
             }
         }
-    
-        if (current.length() > 0) {
+
+        // Add final argument
+        if (argumentStarted) {
             args.add(current.toString());
         }
-    
+
         return args;
     }
-    // void func(String command){
-    // List<String> args = new ArrayList<>();
-    // StringBuilder current = new StringBuilder();
 
-    // boolean isQuote = false;
-    // boolean isDoubleQuote = false;
-    // for(char c: command.toCharArray()){
-    // if(c == '\"' && isQuote == false){
-    // isDoubleQuote = true;
-    // } else if(c == '\'' && isDoubleQuote == false){
-    // isQuote = true;
-    // }else if(Character.isWhitespace(c) && isQuote == false ||
-    // Character.isWhitespace(c) && isDoubleQuote == false){
-    // if (current.length() > 0) {
-    // args.add(current.toString());
-    // current.setLength(0);
-    // }
-    // }else{
-    // current.append(c);
-    // }
-    // }
 
     public void executeEcho(List<String> commandSplit, PrintStream output) {
+
         StringBuilder string = new StringBuilder();
-    
+
         for (int i = 1; i < commandSplit.size(); i++) {
-    
+
             if (i > 1) {
                 string.append(" ");
             }
-    
+
             string.append(commandSplit.get(i));
         }
-    
+
         output.println(string);
     }
-
 }
