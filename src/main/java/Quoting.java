@@ -5,72 +5,102 @@ import java.util.List;
 public class Quoting {
 
     public static List<String> parseCommand(String command) {
+
         List<String> args = new ArrayList<>();
         StringBuilder current = new StringBuilder();
-
+    
         boolean inSingleQuote = false;
         boolean inDoubleQuote = false;
-        boolean escaped = false;
-
+    
         char[] chars = command.toCharArray();
+    
         for (int i = 0; i < chars.length; i++) {
+    
             char c = chars[i];
-
-            if (escaped) {
-                // Unquoted backslash: append next char as a literal
-                current.append(c);
-                escaped = false;
-            } else if (inDoubleQuote) {
+    
+            // -------------------------
+            // Inside double quotes
+            // -------------------------
+            if (inDoubleQuote) {
+    
                 if (c == '\\') {
-                    // Peek at the next character inside double quotes
+    
                     if (i + 1 < chars.length) {
+    
                         char next = chars[i + 1];
+    
+                        // Inside double quotes,
+                        // only " and \ are escaped
                         if (next == '"' || next == '\\') {
-                            current.append(next); // Append the escaped character directly
-                            i++; // Consume the escaped character
+                            current.append(next);
+                            i++;
                             continue;
                         }
                     }
-                    // Backslash followed by anything else inside double quotes remains literal
-                    current.append(c);
+    
+                    // Backslash before anything else
+                    // remains literal
+                    current.append('\\');
+    
                 } else if (c == '"') {
+    
                     inDoubleQuote = false;
+    
                 } else {
+    
                     current.append(c);
                 }
+    
+            // -------------------------
+            // Inside single quotes
+            // -------------------------
             } else if (inSingleQuote) {
-
+    
                 if (c == '\'') {
-
                     inSingleQuote = false;
-
                 } else {
                     current.append(c);
                 }
-            } else if (c == '\\') {
-                escaped = true;
-
-            } else if (c == '\'') {
-                inSingleQuote = true;
-            } else if (c == '"') {
-                inDoubleQuote = true;
-            } else if (Character.isWhitespace(c)) {
-                if (current.length() > 0) {
-                    args.add(current.toString());
-                    current.setLength(0);
-                }
+    
+            // -------------------------
+            // Outside quotes
+            // -------------------------
             } else {
-                current.append(c);
+    
+                if (c == '\\') {
+    
+                    if (i + 1 < chars.length) {
+                        current.append(chars[++i]);
+                    }
+    
+                } else if (c == '\'') {
+    
+                    inSingleQuote = true;
+    
+                } else if (c == '"') {
+    
+                    inDoubleQuote = true;
+    
+                } else if (Character.isWhitespace(c)) {
+    
+                    if (current.length() > 0) {
+                        args.add(current.toString());
+                        current.setLength(0);
+                    }
+    
+                } else {
+    
+                    current.append(c);
+                }
             }
         }
-
+    
         if (current.length() > 0) {
             args.add(current.toString());
         }
-
+    
         return args;
     }
-
     // void func(String command){
     // List<String> args = new ArrayList<>();
     // StringBuilder current = new StringBuilder();
