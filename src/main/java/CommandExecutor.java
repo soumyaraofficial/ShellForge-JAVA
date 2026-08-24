@@ -31,12 +31,26 @@ public class CommandExecutor {
             }
         }
     
-        // Determine where arguments end (cut off at the first redirection symbol)
+        // Cut arguments at the first redirection symbol
         int firstRedirect = commandSplit.size();
         if (redirectIndex != -1) firstRedirect = Math.min(firstRedirect, redirectIndex);
         if (errorRedirectIndex != -1) firstRedirect = Math.min(firstRedirect, errorRedirectIndex);
     
         List<String> cleanArgs = commandSplit.subList(0, firstRedirect);
+    
+        // Ensure output redirect file is created (for both built-ins and external commands)
+        if (redirectFile != null) {
+            File outFile = new File(redirectFile);
+            if (outFile.getParentFile() != null) outFile.getParentFile().mkdirs();
+            output = new PrintStream(outFile);
+        }
+    
+        // Ensure error redirect file is created (for both built-ins and external commands)
+        if (errorRedirectFile != null) {
+            File errFile = new File(errorRedirectFile);
+            if (errFile.getParentFile() != null) errFile.getParentFile().mkdirs();
+            errorOutput = new PrintStream(errFile);
+        }
     
         // Builtins handling
         switch (cleanArgs.get(0)) {
@@ -59,17 +73,13 @@ public class CommandExecutor {
             ProcessBuilder processBuilder = new ProcessBuilder(cleanArgs);
     
             if (redirectFile != null) {
-                File outFile = new File(redirectFile);
-                if (outFile.getParentFile() != null) outFile.getParentFile().mkdirs();
-                processBuilder.redirectOutput(outFile);
+                processBuilder.redirectOutput(new File(redirectFile));
             } else {
                 processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
             }
     
             if (errorRedirectFile != null) {
-                File errFile = new File(errorRedirectFile);
-                if (errFile.getParentFile() != null) errFile.getParentFile().mkdirs();
-                processBuilder.redirectError(errFile);
+                processBuilder.redirectError(new File(errorRedirectFile));
             } else {
                 processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT);
             }
@@ -82,7 +92,6 @@ public class CommandExecutor {
     
         return currentDirectory;
     }
-
     private Path executeCd(String command,Path currentDirectory) {
         if(command.equals("~")){
             Path path =Path.of(System.getenv("HOME"));
