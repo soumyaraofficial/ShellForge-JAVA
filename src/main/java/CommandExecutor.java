@@ -6,40 +6,42 @@ import java.io.PrintStream;
 public class CommandExecutor {
     public Path execute(String command, Path currentDirectory) throws Exception {
 
-        new Quoting();
         List<String> commandSplit = Quoting.parseCommand(command);
-
+    
+        if (commandSplit.isEmpty()) {
+            return currentDirectory;
+        }
+    
         PrintStream output = System.out;
+        PrintStream errorOutput = System.err;
+    
         int redirectIndex = -1;
         String redirectFile = null;
         int errorRedirectIndex = -1;
         String errorRedirectFile = null;
-      
-        PrintStream errorOutput = System.err;
+    
         for (int i = 0; i < commandSplit.size(); i++) {
-
-            if (commandSplit.get(i).equals(">") ||
-                commandSplit.get(i).equals("1>")) {
-        
+            String token = commandSplit.get(i);
+            if (token.equals(">") || token.equals("1>")) {
                 redirectIndex = i;
                 redirectFile = commandSplit.get(i + 1);
-        
-            } else if (commandSplit.get(i).equals("2>")) {
-        
+            } else if (token.equals("2>")) {
                 errorRedirectIndex = i;
                 errorRedirectFile = commandSplit.get(i + 1);
             }
         }
-        
-        if (redirectIndex != -1) {
-            output = new PrintStream(redirectFile);
-            commandSplit = commandSplit.subList(0, redirectIndex);
-        }
-
-
-        switch (commandSplit.get(0)) {
+    
+        // Determine where arguments end (cut off at the first redirection symbol)
+        int firstRedirect = commandSplit.size();
+        if (redirectIndex != -1) firstRedirect = Math.min(firstRedirect, redirectIndex);
+        if (errorRedirectIndex != -1) firstRedirect = Math.min(firstRedirect, errorRedirectIndex);
+    
+        List<String> cleanArgs = commandSplit.subList(0, firstRedirect);
+    
+        // Builtins handling
+        switch (cleanArgs.get(0)) {
             case "echo":
-                new Quoting().executeEcho(commandSplit, output);
+                new Quoting().executeEcho(cleanArgs, output);
                 return currentDirectory;
             case "type":
                 executeType(command, output);
@@ -48,34 +50,36 @@ public class CommandExecutor {
                 output.println(currentDirectory);
                 return currentDirectory;
             case "cd":
-                Path path =  executeCd(commandSplit.get(1),currentDirectory);
+                Path path = executeCd(cleanArgs.get(1), currentDirectory);
                 return path == null ? currentDirectory : path;
-
         }
-
-        if (getCommandPath(commandSplit.get(0)) != null) {
-
-            ProcessBuilder processBuilder = new ProcessBuilder(commandSplit);
-
+    
+        // External commands execution
+        if (getCommandPath(cleanArgs.get(0)) != null) {
+            ProcessBuilder processBuilder = new ProcessBuilder(cleanArgs);
+    
             if (redirectFile != null) {
-                processBuilder.redirectOutput(new File(redirectFile));
+                File outFile = new File(redirectFile);
+                if (outFile.getParentFile() != null) outFile.getParentFile().mkdirs();
+                processBuilder.redirectOutput(outFile);
             } else {
                 processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
             }
-            
+    
             if (errorRedirectFile != null) {
-                processBuilder.redirectError(new File(errorRedirectFile));
+                File errFile = new File(errorRedirectFile);
+                if (errFile.getParentFile() != null) errFile.getParentFile().mkdirs();
+                processBuilder.redirectError(errFile);
             } else {
                 processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT);
             }
-            processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT);
-
+    
             Process process = processBuilder.start();
             process.waitFor();
-
         } else {
             System.out.println(command + ": command not found");
         }
+    
         return currentDirectory;
     }
 
