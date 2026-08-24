@@ -1,8 +1,8 @@
 import java.nio.file.Path;
-import java.util.*;
+
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
-import org.jline.reader.Parser;
+import org.jline.reader.impl.DefaultParser;
 import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
@@ -22,6 +22,27 @@ public class Shell {
                         .system(true)
                         .build();
 
+        // =========================================================
+        // JLINE PARSER
+        // =========================================================
+
+        DefaultParser parser =
+                new DefaultParser();
+
+        /*
+         * IMPORTANT:
+         *
+         * Do NOT let JLine consume backslashes.
+         *
+         * Our Quoting.parseCommand() handles shell
+         * escaping itself.
+         */
+        parser.setEscapeChars(null);
+
+        // =========================================================
+        // COMMAND COMPLETION
+        // =========================================================
+
         StringsCompleter completer =
                 new StringsCompleter(
                         "echo",
@@ -31,66 +52,20 @@ public class Shell {
                         "exit"
                 );
 
-        /*
-         * IMPORTANT:
-         *
-         * JLine normally has its own parser for quotes
-         * and escape characters.
-         *
-         * We don't want JLine parsing our shell command.
-         * Our Quoting.parseCommand() is responsible for that.
-         *
-         * This parser simply returns the original line.
-         */
-        Parser rawParser = new Parser() {
-
-            @Override
-            public org.jline.reader.ParsedLine parse(
-                    String line,
-                    int cursor,
-                    ParseContext context) {
-
-                return new org.jline.reader.ParsedLine() {
-
-                    @Override
-                    public String word() {
-                        return line;
-                    }
-
-                    @Override
-                    public int wordCursor() {
-                        return cursor;
-                    }
-
-                    @Override
-                    public int wordIndex() {
-                        return 0;
-                    }
-
-                    @Override
-                    public List<String> words() {
-                        return List.of(line);
-                    }
-
-                    @Override
-                    public String line() {
-                        return line;
-                    }
-
-                    @Override
-                    public int cursor() {
-                        return cursor;
-                    }
-                };
-            }
-        };
+        // =========================================================
+        // LINE READER
+        // =========================================================
 
         LineReader reader =
                 LineReaderBuilder.builder()
                         .terminal(terminal)
-                        .parser(rawParser)
+                        .parser(parser)
                         .completer(completer)
                         .build();
+
+        // =========================================================
+        // SHELL LOOP
+        // =========================================================
 
         while (true) {
 
