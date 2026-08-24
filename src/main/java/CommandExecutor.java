@@ -1,4 +1,5 @@
 import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -19,15 +20,25 @@ public class CommandExecutor {
         String redirectFile = null;
         int errorRedirectIndex = -1;
         String errorRedirectFile = null;
+
+        int appendIndex = -1;
+        int errorAppendIndex = -1;
     
         for (int i = 0; i < commandSplit.size(); i++) {
             String token = commandSplit.get(i);
             if (token.equals(">") || token.equals("1>")) {
+               
                 redirectIndex = i;
                 redirectFile = commandSplit.get(i + 1);
             } else if (token.equals("2>")) {
                 errorRedirectIndex = i;
                 errorRedirectFile = commandSplit.get(i + 1);
+            } else if(token.equals(">>") || token.equals("1>>")){
+                appendIndex = i;
+                redirectFile = commandSplit.get(i + 1);
+            }else if(token.equals("2>>")){
+                errorAppendIndex = i;
+                errorRedirectFile = commandSplit.get(i+1);
             }
         }
     
@@ -35,21 +46,34 @@ public class CommandExecutor {
         int firstRedirect = commandSplit.size();
         if (redirectIndex != -1) firstRedirect = Math.min(firstRedirect, redirectIndex);
         if (errorRedirectIndex != -1) firstRedirect = Math.min(firstRedirect, errorRedirectIndex);
+        
     
         List<String> cleanArgs = commandSplit.subList(0, firstRedirect);
     
         // Ensure output redirect file is created (for both built-ins and external commands)
-        if (redirectFile != null) {
-            File outFile = new File(redirectFile);
-            if (outFile.getParentFile() != null) outFile.getParentFile().mkdirs();
-            output = new PrintStream(outFile);
-        }
+    if (redirectFile != null) {
+    File outFile = new File(redirectFile);
+
+    if (outFile.getParentFile() != null)
+        outFile.getParentFile().mkdirs();
+
+    if (appendIndex != -1) {
+        output = new PrintStream(new FileOutputStream(outFile, true));
+    } else {
+        output = new PrintStream(outFile);
+    }
+}
     
         // Ensure error redirect file is created (for both built-ins and external commands)
         if (errorRedirectFile != null) {
             File errFile = new File(errorRedirectFile);
+
             if (errFile.getParentFile() != null) errFile.getParentFile().mkdirs();
-            errorOutput = new PrintStream(errFile);
+            if(errorAppendIndex!= -1){
+                errorOutput = new PrintStream(new FileOutputStream(errFile,true));
+            }else{
+            errorOutput = new PrintStream(errFile); 
+            }
         }
     
         // Builtins handling
