@@ -1,4 +1,7 @@
+import java.io.File;
 import java.nio.file.Path;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
@@ -42,16 +45,16 @@ public class Shell {
         // =========================================================
         // COMMAND COMPLETION
         // =========================================================
+        Set<String> commands = getCommands();
+        commands.add("echo");
+        commands.add("cd");
+        commands.add("pwd");
+        commands.add("type");
+        commands.add("exit");
 
         StringsCompleter completer =
                 new StringsCompleter(
-                        "echo",
-                        "cd",
-                        "pwd",
-                        "type",
-                        "exit"
-                );
-
+                      commands );
         // =========================================================
         // LINE READER
         // =========================================================
@@ -93,4 +96,35 @@ public class Shell {
 
         terminal.close();
     }
+
+    public static Set<String> getCommands() {
+
+    Set<String> commands = new TreeSet<>();
+
+    String paths = System.getenv("PATH");
+
+    if (paths == null) {
+        return commands;
+    }
+
+    for (String dir : paths.split(File.pathSeparator)) {
+
+        File directory = new File(dir);
+
+        File[] files = directory.listFiles();
+
+        if (files == null) {
+            continue;
+        }
+
+        for (File file : files) {
+
+            if (file.isFile() && file.canExecute()) {
+                commands.add(file.getName());
+            }
+        }
+    }
+
+    return commands;
+}
 }
