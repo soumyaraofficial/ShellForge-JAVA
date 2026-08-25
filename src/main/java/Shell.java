@@ -21,7 +21,7 @@ public class Shell {
             Path.of("").toAbsolutePath();
 
     /*
-     * Used for multiple completion handling.
+     * Multiple completion state.
      *
      * false = first TAB
      * true  = second TAB
@@ -40,7 +40,7 @@ public class Shell {
                         .build();
 
         // =========================================================
-        // PARSER
+        // JLINE PARSER
         // =========================================================
 
         DefaultParser parser =
@@ -49,7 +49,7 @@ public class Shell {
         /*
          * Do not let JLine consume backslashes.
          *
-         * Our own Quoting.parseCommand() handles escaping.
+         * Our Quoting.parseCommand() handles shell escaping.
          */
         parser.setEscapeChars(null);
 
@@ -70,87 +70,111 @@ public class Shell {
         Widget tabWidget = () -> {
 
             /*
-             * Get exactly what the user has typed so far.
-             *
-             * Example:
-             *
-             * xyz_
+             * Get the current input buffer.
              */
             String buffer =
                     reader.getBuffer().toString();
 
+            /*
+             * Get the command prefix.
+             *
+             * Examples:
+             *
+             * "ech"      -> "ech"
+             * "custom"   -> "custom"
+             * "xyz_"     -> "xyz_"
+             */
             String prefix =
                     getCommandPrefix(buffer);
 
             /*
-             * Find executable commands from PATH.
+             * Find both builtin and external commands.
              */
             List<String> matches =
                     findMatchingCommands(prefix);
 
-            // -----------------------------------------------------
+            // =====================================================
             // NO MATCHES
-            // -----------------------------------------------------
+            // =====================================================
 
             if (matches.isEmpty()) {
 
+                /*
+                 * No completion exists.
+                 *
+                 * Ring the bell.
+                 */
                 tabPressed = false;
 
-                /*
-                 * ASCII BEL
-                 */
                 terminal.writer().print("\007");
                 terminal.writer().flush();
 
                 return true;
             }
 
-            // -----------------------------------------------------
+            // =====================================================
             // ONE MATCH
-            // -----------------------------------------------------
+            // =====================================================
 
             if (matches.size() == 1) {
 
                 String match =
                         matches.get(0);
-            
+
+                /*
+                 * Replace only the command prefix.
+                 */
                 String completed =
                         replaceCommandPrefix(
                                 buffer,
                                 prefix,
                                 match
                         );
-            
+
                 /*
-                 * CodeCrafters expects a trailing space after
-                 * a successful command completion.
+                 * CodeCrafters expects a space after
+                 * a successful completion.
                  *
-                 * Only add it when the command is currently
-                 * the entire input. If there are already arguments,
-                 * don't add another space.
+                 * Example:
+                 *
+                 * ech<TAB>
+                 *
+                 * becomes:
+                 *
+                 * echo␠
                  */
                 if (buffer.length() == prefix.length()) {
                     completed += " ";
                 }
-            
+
+                /*
+                 * Update JLine's input buffer.
+                 */
                 reader.getBuffer().clear();
-                reader.getBuffer().write(completed);
-            
+
+                reader.getBuffer().write(
+                        completed
+                );
+
+                /*
+                 * Reset multiple-TAB state.
+                 */
                 tabPressed = false;
-            
+
                 return true;
             }
 
-            // -----------------------------------------------------
+            // =====================================================
             // MULTIPLE MATCHES
-            // -----------------------------------------------------
+            // =====================================================
 
+            /*
+             * FIRST TAB
+             */
             if (!tabPressed) {
 
                 /*
-                 * FIRST TAB:
-                 *
-                 * Ring bell only.
+                 * Only ring the bell.
                  *
                  * Do NOT print matches.
                  */
@@ -163,32 +187,30 @@ public class Shell {
             }
 
             /*
-             * SECOND TAB:
+             * SECOND TAB
              *
-             * Print all matches on a new line.
+             * Print all matches.
              */
+
             terminal.writer().println();
 
             terminal.writer().println(
-                    String.join("  ", matches)
+                    String.join(
+                            "  ",
+                            matches
+                    )
             );
 
             terminal.writer().flush();
 
             /*
-             * Reset so another pair of TAB presses starts
-             * from the first TAB again.
+             * Reset TAB state.
              */
             tabPressed = false;
 
             /*
-             * Redraw the prompt and preserve the original
-             * command buffer.
-             *
-             * Example:
-             *
-             * xyz_cow  xyz_owl  xyz_rat
-             * $ xyz_
+             * Redraw the original prompt and
+             * preserve the input buffer.
              */
             reader.callWidget(
                     LineReader.REDRAW_LINE
@@ -202,7 +224,7 @@ public class Shell {
         };
 
         // =========================================================
-        // REGISTER CUSTOM TAB
+        // REGISTER TAB WIDGET
         // =========================================================
 
         reader.getWidgets().put(
@@ -211,7 +233,7 @@ public class Shell {
         );
 
         /*
-         * Override JLine's normal TAB behavior.
+         * Override JLine's default TAB behavior.
          */
         reader.getKeyMaps()
                 .get(LineReader.MAIN)
@@ -229,7 +251,8 @@ public class Shell {
             while (true) {
 
                 /*
-                 * Every new command starts a new TAB sequence.
+                 * Every new command starts a fresh
+                 * multiple-completion sequence.
                  */
                 tabPressed = false;
 
@@ -249,13 +272,10 @@ public class Shell {
                 }
 
                 /*
-                 * IMPORTANT:
+                 * Execute the command.
                  *
-                 * Command execution is completely separate
-                 * from completion.
-                 *
-                 * External commands still go through your
-                 * CommandExecutor.
+                 * External commands and builtins are handled
+                 * by CommandExecutor.
                  */
                 currentDirectory =
                         executor.execute(
@@ -274,7 +294,8 @@ public class Shell {
     // GET COMMAND PREFIX
     // =============================================================
 
-    private String getCommandPrefix(String buffer) {
+    private String getCommandPrefix(
+            String buffer) {
 
         /*
          * Ignore leading spaces.
@@ -291,11 +312,11 @@ public class Shell {
          *
          * Example:
          *
-         * xyz_
-         *       -> xyz_
+         * "echo hello"
          *
-         * xyz_ hello
-         *       -> xyz_
+         * gives:
+         *
+         * "echo"
          */
         int spaceIndex =
                 trimmed.indexOf(' ');
@@ -311,17 +332,17 @@ public class Shell {
     }
 
     // =============================================================
-    // FIND MATCHING EXECUTABLES
+    // FIND MATCHING COMMANDS
     // =============================================================
 
     private List<String> findMatchingCommands(
             String prefix) {
 
         /*
-         * TreeSet provides:
+         * TreeSet:
          *
-         * 1. Alphabetical ordering
-         * 2. Duplicate removal
+         * 1. Alphabetically sorts commands
+         * 2. Removes duplicates
          */
         Set<String> sortedMatches =
                 new TreeSet<>();
@@ -332,68 +353,92 @@ public class Shell {
             return new ArrayList<>();
         }
 
+        // =========================================================
+        // BUILTIN COMMANDS
+        // =========================================================
+
+        sortedMatches.add("echo");
+        sortedMatches.add("cd");
+        sortedMatches.add("pwd");
+        sortedMatches.add("type");
+        sortedMatches.add("exit");
+
+        // =========================================================
+        // EXTERNAL COMMANDS FROM PATH
+        // =========================================================
+
         String path =
                 System.getenv("PATH");
 
-        if (path == null ||
-                path.isEmpty()) {
+        if (path != null &&
+                !path.isEmpty()) {
 
-            return new ArrayList<>();
-        }
+            /*
+             * PATH can contain multiple directories.
+             *
+             * Example:
+             *
+             * /tmp/fox:/tmp/dog:/tmp/rat
+             */
+            for (String directoryPath :
+                    path.split(File.pathSeparator)) {
 
-        /*
-         * PATH can contain multiple directories:
-         *
-         * /tmp/fox:/tmp/dog:/tmp/rat
-         */
-        for (String directoryPath :
-                path.split(File.pathSeparator)) {
+                if (directoryPath == null ||
+                        directoryPath.isEmpty()) {
 
-            if (directoryPath == null ||
-                    directoryPath.isEmpty()) {
-
-                continue;
-            }
-
-            File directory =
-                    new File(directoryPath);
-
-            File[] files =
-                    directory.listFiles();
-
-            if (files == null) {
-                continue;
-            }
-
-            for (File file : files) {
-
-                /*
-                 * Only executable regular files.
-                 */
-                if (!file.isFile()) {
                     continue;
                 }
 
-                if (!file.canExecute()) {
+                File directory =
+                        new File(directoryPath);
+
+                File[] files =
+                        directory.listFiles();
+
+                if (files == null) {
                     continue;
                 }
 
-                String name =
-                        file.getName();
+                for (File file : files) {
 
-                /*
-                 * Check command prefix.
-                 */
-                if (name.startsWith(prefix)) {
+                    /*
+                     * Only regular files.
+                     */
+                    if (!file.isFile()) {
+                        continue;
+                    }
+
+                    /*
+                     * Only executable files.
+                     */
+                    if (!file.canExecute()) {
+                        continue;
+                    }
+
+                    String name =
+                            file.getName();
 
                     sortedMatches.add(name);
                 }
             }
         }
 
-        return new ArrayList<>(
-                sortedMatches
-        );
+        // =========================================================
+        // FILTER BY PREFIX
+        // =========================================================
+
+        List<String> matches =
+                new ArrayList<>();
+
+        for (String command :
+                sortedMatches) {
+
+            if (command.startsWith(prefix)) {
+                matches.add(command);
+            }
+        }
+
+        return matches;
     }
 
     // =============================================================
@@ -406,7 +451,7 @@ public class Shell {
             String replacement) {
 
         /*
-         * Number of leading spaces.
+         * Count leading spaces.
          */
         int leadingSpaces =
                 buffer.length()
@@ -417,9 +462,19 @@ public class Shell {
          *
          * Example:
          *
-         * "xyz_" -> "xyz_cow"
+         * "ech"
          *
-         * "xyz_ hello" -> "xyz_cow hello"
+         * becomes:
+         *
+         * "echo"
+         *
+         * And:
+         *
+         * "ech hello"
+         *
+         * becomes:
+         *
+         * "echo hello"
          */
         return buffer.substring(
                 0,
@@ -433,7 +488,7 @@ public class Shell {
     }
 
     // =============================================================
-    // GET ALL COMMANDS FROM PATH
+    // GET ALL EXTERNAL COMMANDS
     // =============================================================
 
     public static Set<String> getCommands() {
