@@ -113,26 +113,31 @@ public class Shell {
 
                 String match =
                         matches.get(0);
-
+            
                 String completed =
                         replaceCommandPrefix(
                                 buffer,
                                 prefix,
                                 match
                         );
-
+            
                 /*
-                 * Replace current input buffer.
+                 * CodeCrafters expects a trailing space after
+                 * a successful command completion.
+                 *
+                 * Only add it when the command is currently
+                 * the entire input. If there are already arguments,
+                 * don't add another space.
                  */
+                if (buffer.length() == prefix.length()) {
+                    completed += " ";
+                }
+            
                 reader.getBuffer().clear();
                 reader.getBuffer().write(completed);
-
-                /*
-                 * A successful completion starts a new
-                 * TAB sequence.
-                 */
+            
                 tabPressed = false;
-
+            
                 return true;
             }
 
