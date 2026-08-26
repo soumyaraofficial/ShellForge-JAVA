@@ -21,7 +21,7 @@ public class Shell {
             Path.of("").toAbsolutePath();
 
     /*
-     * Multiple completion state.
+     * Used for WH6 multiple-match handling.
      *
      * false = first TAB
      * true  = second TAB
@@ -40,7 +40,7 @@ public class Shell {
                         .build();
 
         // =========================================================
-        // JLINE PARSER
+        // PARSER
         // =========================================================
 
         DefaultParser parser =
@@ -69,26 +69,15 @@ public class Shell {
 
         Widget tabWidget = () -> {
 
-            /*
-             * Get the current input buffer.
-             */
             String buffer =
                     reader.getBuffer().toString();
 
-            /*
-             * Get the command prefix.
-             *
-             * Examples:
-             *
-             * "ech"      -> "ech"
-             * "custom"   -> "custom"
-             * "xyz_"     -> "xyz_"
-             */
             String prefix =
                     getCommandPrefix(buffer);
 
             /*
-             * Find both builtin and external commands.
+             * Find all builtin and external commands
+             * matching the current prefix.
              */
             List<String> matches =
                     findMatchingCommands(prefix);
@@ -99,13 +88,11 @@ public class Shell {
 
             if (matches.isEmpty()) {
 
-                /*
-                 * No completion exists.
-                 *
-                 * Ring the bell.
-                 */
                 tabPressed = false;
 
+                /*
+                 * Ring the bell.
+                 */
                 terminal.writer().print("\007");
                 terminal.writer().flush();
 
@@ -121,9 +108,6 @@ public class Shell {
                 String match =
                         matches.get(0);
 
-                /*
-                 * Replace only the command prefix.
-                 */
                 String completed =
                         replaceCommandPrefix(
                                 buffer,
@@ -132,33 +116,21 @@ public class Shell {
                         );
 
                 /*
-                 * CodeCrafters expects a space after
-                 * a successful completion.
+                 * Exactly one match means the command is
+                 * completely resolved.
                  *
-                 * Example:
-                 *
-                 * ech<TAB>
-                 *
-                 * becomes:
-                 *
-                 * echo␠
+                 * Add the required trailing space.
                  */
                 if (buffer.length() == prefix.length()) {
                     completed += " ";
                 }
 
-                /*
-                 * Update JLine's input buffer.
-                 */
                 reader.getBuffer().clear();
 
                 reader.getBuffer().write(
                         completed
                 );
 
-                /*
-                 * Reset multiple-TAB state.
-                 */
                 tabPressed = false;
 
                 return true;
@@ -169,14 +141,84 @@ public class Shell {
             // =====================================================
 
             /*
-             * FIRST TAB
+             * Find the longest common prefix of all matches.
              */
+            String commonPrefix =
+                    longestCommonPrefix(matches);
+
+            // =====================================================
+            // LCP IS LONGER THAN CURRENT INPUT
+            // =====================================================
+
+            if (commonPrefix.length() > prefix.length()) {
+
+                /*
+                 * We can make progress.
+                 *
+                 * Example:
+                 *
+                 * xyz_
+                 *
+                 * matches:
+                 *
+                 * xyz_foo
+                 * xyz_foo_bar
+                 * xyz_foo_bar_baz
+                 *
+                 * commonPrefix:
+                 *
+                 * xyz_foo
+                 */
+                String completed =
+                        replaceCommandPrefix(
+                                buffer,
+                                prefix,
+                                commonPrefix
+                        );
+
+                reader.getBuffer().clear();
+
+                reader.getBuffer().write(
+                        completed
+                );
+
+                /*
+                 * This was a successful partial completion.
+                 *
+                 * Do not add a space because there are
+                 * still multiple possible commands.
+                 */
+                tabPressed = false;
+
+                return true;
+            }
+
+            // =====================================================
+            // NO FURTHER LCP PROGRESS
+            // =====================================================
+
+            /*
+             * The current input is already the longest common
+             * prefix.
+             *
+             * Example:
+             *
+             * xyz_
+             *
+             * xyz_cow
+             * xyz_owl
+             * xyz_rat
+             *
+             * There is no additional character to complete.
+             *
+             * First TAB -> bell
+             * Second TAB -> list matches
+             */
+
             if (!tabPressed) {
 
                 /*
-                 * Only ring the bell.
-                 *
-                 * Do NOT print matches.
+                 * FIRST TAB
                  */
                 terminal.writer().print("\007");
                 terminal.writer().flush();
@@ -186,11 +228,9 @@ public class Shell {
                 return true;
             }
 
-            /*
-             * SECOND TAB
-             *
-             * Print all matches.
-             */
+            // =====================================================
+            // SECOND TAB
+            // =====================================================
 
             terminal.writer().println();
 
@@ -203,14 +243,10 @@ public class Shell {
 
             terminal.writer().flush();
 
-            /*
-             * Reset TAB state.
-             */
             tabPressed = false;
 
             /*
-             * Redraw the original prompt and
-             * preserve the input buffer.
+             * Restore the prompt and original input.
              */
             reader.callWidget(
                     LineReader.REDRAW_LINE
@@ -224,7 +260,7 @@ public class Shell {
         };
 
         // =========================================================
-        // REGISTER TAB WIDGET
+        // REGISTER CUSTOM TAB WIDGET
         // =========================================================
 
         reader.getWidgets().put(
@@ -233,7 +269,7 @@ public class Shell {
         );
 
         /*
-         * Override JLine's default TAB behavior.
+         * Override JLine's normal TAB behavior.
          */
         reader.getKeyMaps()
                 .get(LineReader.MAIN)
@@ -251,8 +287,7 @@ public class Shell {
             while (true) {
 
                 /*
-                 * Every new command starts a fresh
-                 * multiple-completion sequence.
+                 * Every new command starts a new TAB sequence.
                  */
                 tabPressed = false;
 
@@ -272,10 +307,7 @@ public class Shell {
                 }
 
                 /*
-                 * Execute the command.
-                 *
-                 * External commands and builtins are handled
-                 * by CommandExecutor.
+                 * Execute command normally.
                  */
                 currentDirectory =
                         executor.execute(
@@ -308,15 +340,13 @@ public class Shell {
         }
 
         /*
-         * We only complete the first word.
+         * Only complete the first word.
          *
          * Example:
          *
-         * "echo hello"
+         * "xyz_ hello"
          *
-         * gives:
-         *
-         * "echo"
+         * -> "xyz_"
          */
         int spaceIndex =
                 trimmed.indexOf(' ');
@@ -338,12 +368,6 @@ public class Shell {
     private List<String> findMatchingCommands(
             String prefix) {
 
-        /*
-         * TreeSet:
-         *
-         * 1. Alphabetically sorts commands
-         * 2. Removes duplicates
-         */
         Set<String> sortedMatches =
                 new TreeSet<>();
 
@@ -364,7 +388,7 @@ public class Shell {
         sortedMatches.add("exit");
 
         // =========================================================
-        // EXTERNAL COMMANDS FROM PATH
+        // EXTERNAL COMMANDS
         // =========================================================
 
         String path =
@@ -373,13 +397,6 @@ public class Shell {
         if (path != null &&
                 !path.isEmpty()) {
 
-            /*
-             * PATH can contain multiple directories.
-             *
-             * Example:
-             *
-             * /tmp/fox:/tmp/dog:/tmp/rat
-             */
             for (String directoryPath :
                     path.split(File.pathSeparator)) {
 
@@ -401,16 +418,10 @@ public class Shell {
 
                 for (File file : files) {
 
-                    /*
-                     * Only regular files.
-                     */
                     if (!file.isFile()) {
                         continue;
                     }
 
-                    /*
-                     * Only executable files.
-                     */
                     if (!file.canExecute()) {
                         continue;
                     }
@@ -418,13 +429,15 @@ public class Shell {
                     String name =
                             file.getName();
 
-                    sortedMatches.add(name);
+                    if (name.startsWith(prefix)) {
+                        sortedMatches.add(name);
+                    }
                 }
             }
         }
 
         // =========================================================
-        // FILTER BY PREFIX
+        // FILTER
         // =========================================================
 
         List<String> matches =
@@ -442,6 +455,64 @@ public class Shell {
     }
 
     // =============================================================
+    // LONGEST COMMON PREFIX
+    // =============================================================
+
+    private String longestCommonPrefix(
+            List<String> matches) {
+
+        if (matches == null ||
+                matches.isEmpty()) {
+
+            return "";
+        }
+
+        if (matches.size() == 1) {
+            return matches.get(0);
+        }
+
+        String first =
+                matches.get(0);
+
+        int commonLength =
+                first.length();
+
+        for (int i = 1;
+             i < matches.size();
+             i++) {
+
+            String current =
+                    matches.get(i);
+
+            int length =
+                    Math.min(
+                            commonLength,
+                            current.length()
+                    );
+
+            int j = 0;
+
+            while (j < length &&
+                    first.charAt(j)
+                            == current.charAt(j)) {
+
+                j++;
+            }
+
+            commonLength = j;
+
+            if (commonLength == 0) {
+                return "";
+            }
+        }
+
+        return first.substring(
+                0,
+                commonLength
+        );
+    }
+
+    // =============================================================
     // REPLACE COMMAND PREFIX
     // =============================================================
 
@@ -451,31 +522,12 @@ public class Shell {
             String replacement) {
 
         /*
-         * Count leading spaces.
+         * Preserve leading spaces.
          */
         int leadingSpaces =
                 buffer.length()
                         - buffer.stripLeading().length();
 
-        /*
-         * Replace only the first command.
-         *
-         * Example:
-         *
-         * "ech"
-         *
-         * becomes:
-         *
-         * "echo"
-         *
-         * And:
-         *
-         * "ech hello"
-         *
-         * becomes:
-         *
-         * "echo hello"
-         */
         return buffer.substring(
                 0,
                 leadingSpaces
