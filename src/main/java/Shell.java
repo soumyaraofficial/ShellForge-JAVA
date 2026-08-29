@@ -7,8 +7,6 @@ import org.jline.reader.Completer;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.impl.DefaultParser;
-import org.jline.reader.impl.completer.ArgumentCompleter;
-import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
@@ -54,39 +52,28 @@ public class Shell {
         commands.add("type");
         commands.add("exit");
 
-        StringsCompleter commandCompleter =
-                new StringsCompleter(
-                        commands
-                );
-
         // =========================================================
         // FILENAME COMPLETION  (NEW)
         //
-        // Word 0 (the command itself) keeps using the existing
-        // commandCompleter above, completely unchanged.
+        // A single completer that dispatches on word position:
         //
-        // Word 1+ (arguments, e.g. "cat re<TAB>") is routed to
-        // FilenameCompleter, which scans the shell's live
-        // current directory.
+        //  - word 0 (the command itself) is completed against
+        //    `commands`, using the exact same flat Candidate
+        //    construction StringsCompleter used before, so JLine's
+        //    default ambiguous-completion behavior (bell on first
+        //    TAB, list on second TAB, common-prefix expansion)
+        //    is unchanged from the previous behavior.
+        //
+        //  - word 1+ (arguments, e.g. "cat re<TAB>") is completed
+        //    against filenames in the shell's live current
+        //    directory.
         // =========================================================
 
-        Completer filenameCompleter =
+        Completer completer =
                 new FileNameCompleter(
-                        () -> currentDirectory
+                        () -> currentDirectory,
+                        () -> commands
                 );
-
-        ArgumentCompleter completer =
-                new ArgumentCompleter(
-                        commandCompleter,
-                        filenameCompleter
-                );
-
-        /*
-         * Don't require the command word to be an exact,
-         * already-validated match before allowing argument
-         * (filename) completion to kick in.
-         */
-        completer.setStrict(false);
 
         // =========================================================
         // LINE READER
