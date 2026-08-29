@@ -287,6 +287,25 @@ public class CommandExecutor {
                 return path == null
                         ? currentDirectory
                         : path;
+
+            // -----------------------------------------------------
+            // COMPLETE
+            // -----------------------------------------------------
+
+            case "complete":
+
+                new CompleteBuiltin().execute(
+                        cleanArgs,
+                        output,
+                        errorOutput
+                );
+
+                closeRedirectedStreams(
+                        output,
+                        errorOutput
+                );
+
+                return currentDirectory;
         }
 
         // =========================================================
@@ -505,20 +524,8 @@ public class CommandExecutor {
     public static String type(
             String command) {
 
-        String[] builtin = {
-                "exit",
-                "echo",
-                "type",
-                "pwd",
-                "cd"
-        };
-
-        for (String s : builtin) {
-
-            if (s.equalsIgnoreCase(command)) {
-
-                return " is a shell builtin";
-            }
+        if (Builtins.isBuiltin(command)) {
+            return " is a shell builtin";
         }
 
         String path =

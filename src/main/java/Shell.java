@@ -46,11 +46,7 @@ public class Shell {
         // COMMAND LIST (used by TAB completion for word 0)
         // =========================================================
         Set<String> commands = getCommands();
-        commands.add("echo");
-        commands.add("cd");
-        commands.add("pwd");
-        commands.add("type");
-        commands.add("exit");
+        commands.addAll(Builtins.names());
 
         // =========================================================
         // LINE READER
