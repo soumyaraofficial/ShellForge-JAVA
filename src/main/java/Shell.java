@@ -3,9 +3,9 @@ import java.nio.file.Path;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.jline.reader.Completer;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.Reference;
 import org.jline.reader.impl.DefaultParser;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
@@ -43,7 +43,7 @@ public class Shell {
         parser.setEscapeChars(null);
 
         // =========================================================
-        // COMMAND COMPLETION
+        // COMMAND LIST (used by TAB completion for word 0)
         // =========================================================
         Set<String> commands = getCommands();
         commands.add("echo");
@@ -53,38 +53,47 @@ public class Shell {
         commands.add("exit");
 
         // =========================================================
-        // FILENAME COMPLETION  (NEW)
-        //
-        // A single completer that dispatches on word position:
-        //
-        //  - word 0 (the command itself) is completed against
-        //    `commands`, using the exact same flat Candidate
-        //    construction StringsCompleter used before, so JLine's
-        //    default ambiguous-completion behavior (bell on first
-        //    TAB, list on second TAB, common-prefix expansion)
-        //    is unchanged from the previous behavior.
-        //
-        //  - word 1+ (arguments, e.g. "cat re<TAB>") is completed
-        //    against filenames in the shell's live current
-        //    directory.
-        // =========================================================
-
-        Completer completer =
-                new FileNameCompleter(
-                        () -> currentDirectory,
-                        () -> commands
-                );
-
-        // =========================================================
         // LINE READER
+        //
+        // No .completer(...) is registered here: JLine's built-in
+        // ambiguous-completion handling doesn't implement the
+        // required "bell on first TAB, list on second TAB" flow in
+        // this environment, so completion is instead driven
+        // entirely by a custom widget bound directly to the TAB
+        // key below.
         // =========================================================
 
         LineReader reader =
                 LineReaderBuilder.builder()
                         .terminal(terminal)
                         .parser(parser)
-                        .completer(completer)
                         .build();
+
+        // =========================================================
+        // TAB COMPLETION  (commands for word 0, filenames for
+        // word 1+, with longest-common-prefix completion and
+        // bell-then-list behavior for ambiguous matches)
+        // =========================================================
+
+        FileNameCompleter tabCompletion =
+                new FileNameCompleter(
+                        reader,
+                        terminal,
+                        () -> currentDirectory,
+                        () -> commands
+                );
+
+        reader.getWidgets().put(
+                "shell-tab-complete",
+                tabCompletion.createTabWidget()
+        );
+
+        reader.getKeyMaps()
+                .get(LineReader.MAIN)
+                .bind(
+                        new Reference("shell-tab-complete"),
+                        "\t"
+                );
 
         // =========================================================
         // SHELL LOOP
