@@ -18,6 +18,31 @@ public class CommandExecutor {
             return currentDirectory;
         }
 
+        // =========================================================
+        // BACKGROUND EXECUTION (&)
+        //
+        // Only the real tokenizer's output is inspected here (not
+        // a naive string split), so existing quoting behavior is
+        // fully preserved. Stripped before redirection scanning so
+        // nothing downstream ever sees the "&" token.
+        // =========================================================
+
+        boolean background = false;
+
+        if (commandSplit.get(commandSplit.size() - 1).equals("&")) {
+
+            background = true;
+
+            commandSplit.remove(commandSplit.size() - 1);
+        }
+
+        if (commandSplit.isEmpty()) {
+            return currentDirectory;
+        }
+
+        String displayCommand =
+                String.join(" ", commandSplit);
+
         PrintStream output = System.out;
         PrintStream errorOutput = System.err;
 
@@ -306,6 +331,21 @@ public class CommandExecutor {
                 );
 
                 return currentDirectory;
+
+            // -----------------------------------------------------
+            // JOBS
+            // -----------------------------------------------------
+
+            case "jobs":
+
+                new JobsBuiltin().execute(output);
+
+                closeRedirectedStreams(
+                        output,
+                        errorOutput
+                );
+
+                return currentDirectory;
         }
 
         // =========================================================
@@ -382,7 +422,35 @@ public class CommandExecutor {
             Process process =
                     processBuilder.start();
 
-            process.waitFor();
+            // -----------------------------------------------------
+            // BACKGROUND vs FOREGROUND
+            //
+            // Background: register the job and print "[n] pid"
+            // immediately, without waiting - the shell-level
+            // announcement always goes to the real stdout, never
+            // to a redirected `output` stream, matching how job
+            // control messages work regardless of the command's
+            // own redirections.
+            //
+            // Foreground: unchanged - wait exactly as before.
+            // -----------------------------------------------------
+
+            if (background) {
+
+                JobManager.Job job =
+                        JobManager.startJob(
+                                process,
+                                displayCommand
+                        );
+
+                System.out.println(
+                        "[" + job.jobNumber + "] " + process.pid()
+                );
+
+            } else {
+
+                process.waitFor();
+            }
 
         } else {
 

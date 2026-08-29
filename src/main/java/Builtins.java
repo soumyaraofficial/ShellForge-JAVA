@@ -16,6 +16,7 @@ public final class Builtins {
         NAMES.add("pwd");
         NAMES.add("cd");
         NAMES.add("complete");
+        NAMES.add("jobs");
     }
 
     // =============================================================

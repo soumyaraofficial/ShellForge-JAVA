@@ -97,6 +97,18 @@ public class Shell {
 
         while (true) {
 
+            // -----------------------------------------------------
+            // AUTOMATIC BACKGROUND JOB REAPING
+            //
+            // Runs before every prompt is drawn - after foreground
+            // commands, builtins, background launches, and empty
+            // input (which loops straight back here via `continue`
+            // below). Prints "Done" lines for anything that
+            // finished since the last check; silent otherwise.
+            // -----------------------------------------------------
+
+            JobManager.reapBeforePrompt(System.out);
+
             String command =
                     reader.readLine("$ ");
 
