@@ -41,7 +41,10 @@ public class FileNameCompleter {
     // Bound directly to the TAB key (see Shell.java). Implements:
     //
     //  - word 0 (command name)    -> match against PATH/builtins
-    //  - word 1+ (argument)       -> match against filenames in
+    //  - word 1+ (argument)       -> if the command has a
+    //                                 registered `complete -C`
+    //                                 completer, run it; otherwise
+    //                                 match against filenames in
     //                                 the shell's current directory
     //
     // Behavior for both:
@@ -68,9 +71,11 @@ public class FileNameCompleter {
                     getCurrentWordPrefix(buffer);
 
             List<String> matches =
-                    completingFirstWord
-                            ? findMatchingCommands(prefix)
-                            : findMatchingFiles(prefix);
+                    resolveMatches(
+                            buffer,
+                            completingFirstWord,
+                            prefix
+                    );
 
             // =====================================================
             // NO MATCHES
@@ -99,8 +104,9 @@ public class FileNameCompleter {
                  * Directory matches already carry a trailing '/'
                  * (added in findMatchingFiles) and get no space,
                  * so the user can immediately TAB into the next
-                 * path segment. Everything else (files, commands)
-                 * gets a trailing space as before.
+                 * path segment. Everything else (files, commands,
+                 * external completer candidates) gets a trailing
+                 * space as before.
                  */
                 String separator =
                         match.endsWith("/")
@@ -204,6 +210,57 @@ public class FileNameCompleter {
 
     public void resetTabState() {
         tabPressed = false;
+    }
+
+    // =============================================================
+    // RESOLVE MATCHES
+    //
+    // word 0            -> commands (unchanged)
+    // word 1+, command
+    //   has a registered
+    //   -C completer     -> run the external completer
+    // word 1+, otherwise -> filenames (unchanged)
+    // =============================================================
+
+    private List<String> resolveMatches(
+            String buffer,
+            boolean completingFirstWord,
+            String prefix) {
+
+        if (completingFirstWord) {
+            return findMatchingCommands(prefix);
+        }
+
+        String commandName =
+                getCommandName(buffer);
+
+        String completerScript =
+                CompletionRegistry.get(commandName);
+
+        if (completerScript != null) {
+
+            int cursor =
+                    reader.getBuffer().cursor();
+
+            return ExternalCompleter.getCandidates(
+                    completerScript,
+                    buffer,
+                    cursor
+            );
+        }
+
+        return findMatchingFiles(prefix);
+    }
+
+    private String getCommandName(String buffer) {
+
+        String trimmed = buffer.stripLeading();
+
+        int spaceIndex = trimmed.indexOf(' ');
+
+        return spaceIndex == -1
+                ? trimmed
+                : trimmed.substring(0, spaceIndex);
     }
 
     // =============================================================
