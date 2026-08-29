@@ -1,22 +1,27 @@
-import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.function.Supplier;
-
 import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
 import org.jline.reader.LineReader;
 import org.jline.reader.ParsedLine;
 
-public class FileNameCompleter implements Completer {
+import java.io.File;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.function.Supplier;
+
+public class FilenameCompleter implements Completer {
 
     private final Supplier<Path> currentDirectorySupplier;
 
-    public FileNameCompleter(Supplier<Path> currentDirectorySupplier) {
-        this.currentDirectorySupplier = currentDirectorySupplier;
+    public FilenameCompleter(
+            Supplier<Path> currentDirectorySupplier) {
+
+        this.currentDirectorySupplier =
+                currentDirectorySupplier;
     }
+
+    // =============================================================
+    // COMPLETE
+    // =============================================================
 
     @Override
     public void complete(
@@ -24,117 +29,84 @@ public class FileNameCompleter implements Completer {
             ParsedLine line,
             List<Candidate> candidates) {
 
-        String input = line.line();
-
-        int lastWhitespace = findLastWhitespace(input);
-
-        if (lastWhitespace == -1) {
+        if (line == null) {
             return;
         }
 
-        String prefix = input.substring(lastWhitespace + 1);
+        String prefix = line.word();
 
-        /*
-         * Remove surrounding quotes from the prefix.
-         *
-         * Example:
-         *
-         * du 'apple-5
-         *
-         * becomes:
-         *
-         * apple-5
-         */
-        String searchPrefix = removeQuotes(prefix);
+        if (prefix == null) {
+            prefix = "";
+        }
 
-        if (searchPrefix.isEmpty()) {
+        Path directory = resolveDirectory();
+
+        File dir = directory.toFile();
+
+        File[] files = dir.listFiles();
+
+        if (files == null) {
             return;
         }
 
-        Path currentDirectory = currentDirectorySupplier.get();
+        for (File file : files) {
 
-        if (currentDirectory == null) {
-            return;
-        }
+            String name = file.getName();
 
-        try (DirectoryStream<Path> entries =
-                     Files.newDirectoryStream(currentDirectory)) {
-
-            for (Path entry : entries) {
-
-                if (!Files.isRegularFile(entry)) {
-                    continue;
-                }
-
-                String fileName =
-                        entry.getFileName().toString();
-
-                if (!fileName.startsWith(searchPrefix)) {
-                    continue;
-                }
-
-                /*
-                 * Complete only the filename.
-                 *
-                 * JLine will add the trailing space because
-                 * complete() is true.
-                 *
-                 * Do NOT put " " inside the candidate value.
-                 */
-                candidates.add(
-                        new Candidate(
-                                fileName,
-                                fileName,
-                                null,
-                                null,
-                                null,
-                                null,
-                                true
-                        )
-                );
+            if (!name.startsWith(prefix)) {
+                continue;
             }
 
-        } catch (IOException ignored) {
-            // No completion candidates if the directory
-            // cannot be read.
+            /*
+             * complete = true tells JLine's default completion
+             * behavior to:
+             *
+             *  - auto-insert the missing characters when this
+             *    is the only match, and
+             *  - append a trailing space after it,
+             *
+             * exactly matching:
+             *
+             *   cat re<TAB>  -> cat readme.txt
+             *
+             * When multiple candidates match, JLine falls back
+             * to its normal multi-match handling (common-prefix
+             * completion / listing), same as the existing
+             * command completer already does for word 0.
+             */
+            candidates.add(
+                    new Candidate(
+                            name,
+                            name,
+                            null,
+                            null,
+                            null,
+                            null,
+                            true
+                    )
+            );
         }
     }
 
-    private String removeQuotes(String value) {
+    // =============================================================
+    // RESOLVE CURRENT DIRECTORY
+    // =============================================================
 
-        if (value.length() >= 2) {
+    private Path resolveDirectory() {
 
-            char first = value.charAt(0);
-            char last = value.charAt(value.length() - 1);
+        Path directory = null;
 
-            if ((first == '\'' && last == '\'')
-                    || (first == '"' && last == '"')) {
-
-                return value.substring(
-                        1,
-                        value.length() - 1
-                );
-            }
+        if (currentDirectorySupplier != null) {
+            directory = currentDirectorySupplier.get();
         }
 
-        if (value.startsWith("'")
-                || value.startsWith("\"")) {
+        if (directory == null) {
 
-            return value.substring(1);
+            directory = Path.of(
+                    System.getProperty("user.dir")
+            );
         }
 
-        return value;
-    }
-
-    private int findLastWhitespace(String input) {
-
-        for (int i = input.length() - 1; i >= 0; i--) {
-
-            if (Character.isWhitespace(input.charAt(i))) {
-                return i;
-            }
-        }
-
-        return -1;
+        return directory;
     }
 }

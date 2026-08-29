@@ -3,9 +3,11 @@ import java.nio.file.Path;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.jline.reader.Completer;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.impl.DefaultParser;
+import org.jline.reader.impl.completer.ArgumentCompleter;
 import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
@@ -52,9 +54,40 @@ public class Shell {
         commands.add("type");
         commands.add("exit");
 
-        StringsCompleter completer =
+        StringsCompleter commandCompleter =
                 new StringsCompleter(
-                      commands );
+                        commands
+                );
+
+        // =========================================================
+        // FILENAME COMPLETION  (NEW)
+        //
+        // Word 0 (the command itself) keeps using the existing
+        // commandCompleter above, completely unchanged.
+        //
+        // Word 1+ (arguments, e.g. "cat re<TAB>") is routed to
+        // FilenameCompleter, which scans the shell's live
+        // current directory.
+        // =========================================================
+
+        Completer filenameCompleter =
+                new FilenameCompleter(
+                        () -> currentDirectory
+                );
+
+        ArgumentCompleter completer =
+                new ArgumentCompleter(
+                        commandCompleter,
+                        filenameCompleter
+                );
+
+        /*
+         * Don't require the command word to be an exact,
+         * already-validated match before allowing argument
+         * (filename) completion to kick in.
+         */
+        completer.setStrict(false);
+
         // =========================================================
         // LINE READER
         // =========================================================
@@ -99,32 +132,32 @@ public class Shell {
 
     public static Set<String> getCommands() {
 
-    Set<String> commands = new TreeSet<>();
+        Set<String> commands = new TreeSet<>();
 
-    String paths = System.getenv("PATH");
+        String paths = System.getenv("PATH");
 
-    if (paths == null) {
-        return commands;
-    }
-
-    for (String dir : paths.split(File.pathSeparator)) {
-
-        File directory = new File(dir);
-
-        File[] files = directory.listFiles();
-
-        if (files == null) {
-            continue;
+        if (paths == null) {
+            return commands;
         }
 
-        for (File file : files) {
+        for (String dir : paths.split(File.pathSeparator)) {
 
-            if (file.isFile() && file.canExecute()) {
-                commands.add(file.getName());
+            File directory = new File(dir);
+
+            File[] files = directory.listFiles();
+
+            if (files == null) {
+                continue;
+            }
+
+            for (File file : files) {
+
+                if (file.isFile() && file.canExecute()) {
+                    commands.add(file.getName());
+                }
             }
         }
-    }
 
-    return commands;
-}
+        return commands;
+    }
 }
