@@ -71,7 +71,7 @@ public class Shell {
         // =========================================================
 
         Completer filenameCompleter =
-                new FilenameCompleter(
+                new FileNameCompleter(
                         () -> currentDirectory
                 );
 

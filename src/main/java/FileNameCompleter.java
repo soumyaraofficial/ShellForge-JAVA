@@ -8,11 +8,11 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Supplier;
 
-public class FilenameCompleter implements Completer {
+public class FileNameCompleter implements Completer {
 
     private final Supplier<Path> currentDirectorySupplier;
 
-    public FilenameCompleter(
+    public FileNameCompleter(
             Supplier<Path> currentDirectorySupplier) {
 
         this.currentDirectorySupplier =
