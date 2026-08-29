@@ -285,6 +285,17 @@ public class FileNameCompleter {
 
     // =============================================================
     // FIND MATCHING FILES (word 1+)
+    //
+    // Supports nested paths: if the current word contains a '/',
+    // everything up to and including the last '/' is treated as
+    // the directory to search (resolved relative to the shell's
+    // current directory), and everything after it is the name
+    // prefix to match. Matches are returned with the directory
+    // portion re-attached, so the caller can drop the full result
+    // straight back into the buffer as a complete replacement.
+    //
+    // With no '/', behavior is unchanged from before: search the
+    // current directory directly.
     // =============================================================
 
     private List<String> findMatchingFiles(
@@ -297,15 +308,39 @@ public class FileNameCompleter {
             prefix = "";
         }
 
-        Path directory =
+        int lastSlash =
+                prefix.lastIndexOf('/');
+
+        String directoryPart =
+                lastSlash >= 0
+                        ? prefix.substring(0, lastSlash + 1)
+                        : "";
+
+        String namePrefix =
+                lastSlash >= 0
+                        ? prefix.substring(lastSlash + 1)
+                        : prefix;
+
+        Path baseDirectory =
                 resolveDirectory();
 
+        Path searchDirectory =
+                directoryPart.isEmpty()
+                        ? baseDirectory
+                        : baseDirectory
+                                .resolve(directoryPart)
+                                .normalize();
+
         File dir =
-                directory.toFile();
+                searchDirectory.toFile();
 
         File[] files =
                 dir.listFiles();
 
+        /*
+         * Directory doesn't exist, isn't a directory, or isn't
+         * readable - no matches, handled gracefully.
+         */
         if (files == null) {
             return matches;
         }
@@ -318,8 +353,8 @@ public class FileNameCompleter {
             String name =
                     file.getName();
 
-            if (name.startsWith(prefix)) {
-                sortedNames.add(name);
+            if (name.startsWith(namePrefix)) {
+                sortedNames.add(directoryPart + name);
             }
         }
 
