@@ -6,7 +6,6 @@ import java.util.TreeSet;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.impl.DefaultParser;
-import org.jline.reader.impl.completer.AggregateCompleter;
 import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
@@ -59,11 +58,11 @@ public class Shell {
                 );
 
         // =========================================================
-        // COMBINED COMPLETION
+        // SHELL COMPLETER
         // =========================================================
 
-        AggregateCompleter completer =
-                new AggregateCompleter(
+        ShellCompleter completer =
+                new ShellCompleter(
                         commandCompleter,
                         fileNameCompleter
                 );
