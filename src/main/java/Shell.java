@@ -6,6 +6,7 @@ import java.util.TreeSet;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.impl.DefaultParser;
+import org.jline.reader.impl.completer.AggregateCompleter;
 import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
@@ -58,11 +59,11 @@ public class Shell {
                 );
 
         // =========================================================
-        // SHELL COMPLETER
+        // COMBINED COMPLETION
         // =========================================================
 
-        ShellCompleter completer =
-                new ShellCompleter(
+        AggregateCompleter completer =
+                new AggregateCompleter(
                         commandCompleter,
                         fileNameCompleter
                 );
@@ -76,6 +77,28 @@ public class Shell {
                         .terminal(terminal)
                         .parser(parser)
                         .completer(completer)
+
+                        /*
+                         * Do not automatically print all
+                         * matching candidates when there
+                         * are multiple matches.
+                         *
+                         * Codecrafters expects the first
+                         * TAB to leave the line unchanged.
+                         */
+                        .option(
+                                LineReader.Option.AUTO_LIST,
+                                false
+                        )
+                        .option(
+                                LineReader.Option.AUTO_MENU,
+                                false
+                        )
+                        .option(
+                                LineReader.Option.AUTO_MENU_LIST,
+                                false
+                        )
+
                         .build();
 
         // =========================================================
