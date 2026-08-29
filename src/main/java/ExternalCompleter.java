@@ -108,15 +108,17 @@ public final class ExternalCompleter {
     }
 
     // =============================================================
-    // argv[3] - word immediately preceding the current word,
-    // excluding the command name itself. "" if none.
+    // argv[3] - the token immediately preceding the current word
+    // (this includes the command name itself when the current
+    // word is the first argument, e.g. "git pu" -> prev = "git").
+    // "" only when there is truly nothing before the current word.
     // =============================================================
 
     private static String extractPreviousWord(String buffer) {
 
         String[] words = tokenize(buffer);
 
-        if (words.length < 3) {
+        if (words.length < 2) {
             return "";
         }
 
