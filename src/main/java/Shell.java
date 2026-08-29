@@ -6,7 +6,6 @@ import java.util.TreeSet;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.impl.DefaultParser;
-import org.jline.reader.impl.completer.AggregateCompleter;
 import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
@@ -26,46 +25,36 @@ public class Shell {
                         .system(true)
                         .build();
 
+        // =========================================================
+        // JLINE PARSER
+        // =========================================================
+
         DefaultParser parser =
                 new DefaultParser();
 
+        /*
+         * IMPORTANT:
+         *
+         * Do NOT let JLine consume backslashes.
+         *
+         * Our Quoting.parseCommand() handles shell
+         * escaping itself.
+         */
         parser.setEscapeChars(null);
 
         // =========================================================
         // COMMAND COMPLETION
         // =========================================================
-
-        Set<String> commands =
-                getCommands();
-
+        Set<String> commands = getCommands();
         commands.add("echo");
         commands.add("cd");
         commands.add("pwd");
         commands.add("type");
         commands.add("exit");
 
-        StringsCompleter commandCompleter =
-                new StringsCompleter(commands);
-
-        // =========================================================
-        // FILENAME COMPLETION
-        // =========================================================
-
-        FileNameCompleter fileNameCompleter =
-                new FileNameCompleter(
-                        () -> currentDirectory
-                );
-
-        // =========================================================
-        // COMPLETION
-        // =========================================================
-
-        AggregateCompleter completer =
-                new AggregateCompleter(
-                        commandCompleter,
-                        fileNameCompleter
-                );
-
+        StringsCompleter completer =
+                new StringsCompleter(
+                      commands );
         // =========================================================
         // LINE READER
         // =========================================================
@@ -108,47 +97,34 @@ public class Shell {
         terminal.close();
     }
 
-    // =============================================================
-    // GET AVAILABLE COMMANDS
-    // =============================================================
-
     public static Set<String> getCommands() {
 
-        Set<String> commands =
-                new TreeSet<>();
+    Set<String> commands = new TreeSet<>();
 
-        String paths =
-                System.getenv("PATH");
+    String paths = System.getenv("PATH");
 
-        if (paths == null) {
-            return commands;
-        }
-
-        for (String dir :
-                paths.split(File.pathSeparator)) {
-
-            File directory =
-                    new File(dir);
-
-            File[] files =
-                    directory.listFiles();
-
-            if (files == null) {
-                continue;
-            }
-
-            for (File file : files) {
-
-                if (file.isFile()
-                        && file.canExecute()) {
-
-                    commands.add(
-                            file.getName()
-                    );
-                }
-            }
-        }
-
+    if (paths == null) {
         return commands;
     }
+
+    for (String dir : paths.split(File.pathSeparator)) {
+
+        File directory = new File(dir);
+
+        File[] files = directory.listFiles();
+
+        if (files == null) {
+            continue;
+        }
+
+        for (File file : files) {
+
+            if (file.isFile() && file.canExecute()) {
+                commands.add(file.getName());
+            }
+        }
+    }
+
+    return commands;
+}
 }
