@@ -14,11 +14,8 @@ public class FileNameCompleter implements Completer {
 
     private final Supplier<Path> currentDirectorySupplier;
 
-    public FileNameCompleter(
-            Supplier<Path> currentDirectorySupplier) {
-
-        this.currentDirectorySupplier =
-                currentDirectorySupplier;
+    public FileNameCompleter(Supplier<Path> currentDirectorySupplier) {
+        this.currentDirectorySupplier = currentDirectorySupplier;
     }
 
     @Override
@@ -29,39 +26,32 @@ public class FileNameCompleter implements Completer {
 
         String input = line.line();
 
-        /*
-         * Filename completion only applies after
-         * the command name.
-         *
-         * Example:
-         *
-         * cat re
-         *     ^^
-         *
-         * The last whitespace separates the command
-         * from the filename being completed.
-         */
         int lastWhitespace = findLastWhitespace(input);
 
         if (lastWhitespace == -1) {
             return;
         }
 
-        String prefix =
-                input.substring(lastWhitespace + 1);
+        String prefix = input.substring(lastWhitespace + 1);
 
         /*
-         * Nothing to complete.
+         * Remove surrounding quotes from the prefix.
          *
-         * We don't want TAB after "cat " to dump
-         * every file in the directory.
+         * Example:
+         *
+         * du 'apple-5
+         *
+         * becomes:
+         *
+         * apple-5
          */
-        if (prefix.isEmpty()) {
+        String searchPrefix = removeQuotes(prefix);
+
+        if (searchPrefix.isEmpty()) {
             return;
         }
 
-        Path currentDirectory =
-                currentDirectorySupplier.get();
+        Path currentDirectory = currentDirectorySupplier.get();
 
         if (currentDirectory == null) {
             return;
@@ -72,10 +62,6 @@ public class FileNameCompleter implements Completer {
 
             for (Path entry : entries) {
 
-                /*
-                 * This stage requires filename completion,
-                 * so only regular files are considered.
-                 */
                 if (!Files.isRegularFile(entry)) {
                     continue;
                 }
@@ -83,36 +69,61 @@ public class FileNameCompleter implements Completer {
                 String fileName =
                         entry.getFileName().toString();
 
-                if (!fileName.startsWith(prefix)) {
+                if (!fileName.startsWith(searchPrefix)) {
                     continue;
                 }
 
                 /*
-                 * Candidate.value replaces the current
-                 * word being completed.
+                 * Complete only the filename.
                  *
-                 * Example:
+                 * JLine will add the trailing space because
+                 * complete() is true.
                  *
-                 * input:      cat re
-                 * candidate:  readme.txt
-                 *
-                 * becomes:
-                 *
-                 * cat readme.txt
-                 *
-                 * The trailing space is intentional.
+                 * Do NOT put " " inside the candidate value.
                  */
                 candidates.add(
-                        new Candidate(fileName + " ")
+                        new Candidate(
+                                fileName,
+                                fileName,
+                                null,
+                                null,
+                                null,
+                                null,
+                                true
+                        )
                 );
             }
 
         } catch (IOException ignored) {
-            /*
-             * If the directory cannot be read, there is
-             * simply nothing to complete.
-             */
+            // No completion candidates if the directory
+            // cannot be read.
         }
+    }
+
+    private String removeQuotes(String value) {
+
+        if (value.length() >= 2) {
+
+            char first = value.charAt(0);
+            char last = value.charAt(value.length() - 1);
+
+            if ((first == '\'' && last == '\'')
+                    || (first == '"' && last == '"')) {
+
+                return value.substring(
+                        1,
+                        value.length() - 1
+                );
+            }
+        }
+
+        if (value.startsWith("'")
+                || value.startsWith("\"")) {
+
+            return value.substring(1);
+        }
+
+        return value;
     }
 
     private int findLastWhitespace(String input) {

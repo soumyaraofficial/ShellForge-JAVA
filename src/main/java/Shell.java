@@ -33,16 +33,6 @@ public class Shell {
         DefaultParser parser =
                 new DefaultParser();
 
-        /*
-         * IMPORTANT:
-         *
-         * Do NOT let JLine consume backslashes.
-         *
-         * Our Quoting.parseCommand() handles shell
-         * escaping itself.
-         */
-        parser.setEscapeChars(null);
-
         // =========================================================
         // COMMAND COMPLETION
         // =========================================================
