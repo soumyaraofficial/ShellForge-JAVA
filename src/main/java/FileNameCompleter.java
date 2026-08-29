@@ -95,11 +95,23 @@ public class FileNameCompleter {
                 String match =
                         matches.get(0);
 
+                /*
+                 * Directory matches already carry a trailing '/'
+                 * (added in findMatchingFiles) and get no space,
+                 * so the user can immediately TAB into the next
+                 * path segment. Everything else (files, commands)
+                 * gets a trailing space as before.
+                 */
+                String separator =
+                        match.endsWith("/")
+                                ? ""
+                                : " ";
+
                 String completed =
                         replacePrefix(
                                 buffer,
                                 match
-                        ) + " ";
+                        ) + separator;
 
                 setBuffer(completed);
 
@@ -353,9 +365,25 @@ public class FileNameCompleter {
             String name =
                     file.getName();
 
-            if (name.startsWith(namePrefix)) {
-                sortedNames.add(directoryPart + name);
+            if (!name.startsWith(namePrefix)) {
+                continue;
             }
+
+            String entry =
+                    directoryPart + name;
+
+            /*
+             * Directories get a trailing '/' baked into the
+             * match itself (and, per the single-match branch
+             * above, no additional trailing space) so the user
+             * can immediately TAB again into the next path
+             * segment - e.g. "pig/" -> "pig/dog/".
+             */
+            if (file.isDirectory()) {
+                entry = entry + "/";
+            }
+
+            sortedNames.add(entry);
         }
 
         matches.addAll(sortedNames);
