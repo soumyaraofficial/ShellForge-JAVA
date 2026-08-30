@@ -369,6 +369,25 @@ public class CommandExecutor {
                 );
 
                 return currentDirectory;
+
+            // -----------------------------------------------------
+            // HISTORY
+            // -----------------------------------------------------
+
+            case "history":
+
+                new HistoryBuiltin().execute(
+                        cleanArgs,
+                        output,
+                        errorOutput
+                );
+
+                closeRedirectedStreams(
+                        output,
+                        errorOutput
+                );
+
+                return currentDirectory;
         }
 
         // =========================================================
@@ -851,6 +870,7 @@ public class CommandExecutor {
             case "cd":
             case "complete":
             case "jobs":
+            case "history":
                 return true;
 
             default:
@@ -906,6 +926,11 @@ public class CommandExecutor {
             case "jobs":
 
                 new JobsBuiltin().execute(output);
+                return;
+
+            case "history":
+
+                new HistoryBuiltin().execute(args, output, errorOutput);
                 return;
 
             default:

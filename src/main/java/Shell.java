@@ -57,13 +57,27 @@ public class Shell {
         // this environment, so completion is instead driven
         // entirely by a custom widget bound directly to the TAB
         // key below.
+        //
+        // No .history(...) is set explicitly either: JLine builds
+        // an in-memory History automatically, and its default
+        // keymap already binds UP/DOWN to move through it and
+        // ENTER to submit whatever line is currently on the buffer
+        // - which is exactly the behavior the `history` builtin
+        // below needs to read from. HISTORY_IGNORE_DUPS is turned
+        // off so that typing the same command twice in a row (e.g.
+        // "history" immediately followed by "history") still
+        // records two separate entries, as the shell's `history`
+        // output must reflect every invocation.
         // =========================================================
 
         LineReader reader =
                 LineReaderBuilder.builder()
                         .terminal(terminal)
                         .parser(parser)
+                        .option(LineReader.Option.HISTORY_IGNORE_DUPS, false)
                         .build();
+
+        HistoryManager.setHistory(reader.getHistory());
 
         // =========================================================
         // TAB COMPLETION  (commands for word 0, filenames for

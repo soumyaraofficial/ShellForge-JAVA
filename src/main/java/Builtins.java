@@ -17,6 +17,7 @@ public final class Builtins {
         NAMES.add("cd");
         NAMES.add("complete");
         NAMES.add("jobs");
+        NAMES.add("history");
     }
 
     // =============================================================
