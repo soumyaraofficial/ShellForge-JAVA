@@ -80,6 +80,22 @@ public class Shell {
         HistoryManager.setHistory(reader.getHistory());
 
         // =========================================================
+        // LOAD $HISTFILE ON STARTUP
+        //
+        // If HISTFILE is unset or the file doesn't exist, this is
+        // a silent no-op - startup must never crash and must never
+        // create the file just because it was missing. Entries
+        // loaded here are marked as already persisted, so a later
+        // `history -a` or exit-time save won't re-write them.
+        // =========================================================
+
+        String startupHistFile = System.getenv("HISTFILE");
+
+        if (startupHistFile != null && !startupHistFile.isBlank()) {
+            HistoryManager.loadStartupHistory(startupHistFile);
+        }
+
+        // =========================================================
         // TAB COMPLETION  (commands for word 0, filenames for
         // word 1+, with longest-common-prefix completion and
         // bell-then-list behavior for ambiguous matches)
@@ -143,6 +159,21 @@ public class Shell {
                             command,
                             currentDirectory
                     );
+        }
+
+        // =========================================================
+        // PERSIST HISTORY TO $HISTFILE ON EXIT
+        //
+        // Covers both exit paths above (the `exit` command and
+        // EOF/Ctrl-D). Only entries not yet persisted (by startup
+        // load or an earlier `history -a`) are appended, so this
+        // can never duplicate what's already on disk.
+        // =========================================================
+
+        String exitHistFile = System.getenv("HISTFILE");
+
+        if (exitHistFile != null && !exitHistFile.isBlank()) {
+            HistoryManager.saveOnExit(exitHistFile);
         }
 
         terminal.close();
