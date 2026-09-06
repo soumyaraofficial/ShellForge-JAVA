@@ -23,6 +23,22 @@ public class FileNameCompleter {
      */
     private boolean tabPressed = false;
 
+    /*
+     * State for cycling through ambiguous word 1+ (filename/path
+     * or external-completer) matches - one candidate per TAB
+     * press, wrapping back to the first after the last.
+     *
+     * cycleLastBuffer holds the exact buffer text this class wrote
+     * on the previous cycle step; if the buffer still matches that
+     * on the next TAB press, this is a continuation of the same
+     * cycle, otherwise (the user typed something, deleted, or ran
+     * a different completion) the cycle is considered over and a
+     * fresh match list is computed.
+     */
+    private List<String> cycleCandidates = null;
+    private int cycleIndex = -1;
+    private String cycleLastBuffer = null;
+
     public FileNameCompleter(
             LineReader reader,
             Terminal terminal,
@@ -47,14 +63,11 @@ public class FileNameCompleter {
     //                                 match against filenames in
     //                                 the shell's current directory
     //
-    // Behavior for both:
-    //  - 0 matches            -> ring the bell
-    //  - 1 match               -> complete it, trailing space
-    //  - 2+ matches, LCP grows -> complete to the longest common
-    //                             prefix, no trailing space
-    //  - 2+ matches, LCP stuck -> bell on first TAB, list of all
-    //                             matches (alphabetical, two-space
-    //                             separated) on the second TAB
+    // Word 0 (command) completion behavior is unchanged - see
+    // handleCommandCompletion(). Word 1+ completion now cycles
+    // through ambiguous matches on repeated TAB presses instead of
+    // ringing the bell and listing them - see
+    // handleFileCompletion().
     // =============================================================
 
     public Widget createTabWidget() {
@@ -67,75 +80,262 @@ public class FileNameCompleter {
             boolean completingFirstWord =
                     isCompletingFirstWord(buffer);
 
-            String prefix =
-                    getCurrentWordPrefix(buffer);
+            if (completingFirstWord) {
+                return handleCommandCompletion(buffer);
+            }
 
-            List<String> matches =
-                    resolveMatches(
+            return handleFileCompletion(buffer);
+        };
+    }
+
+    // =============================================================
+    // COMMAND COMPLETION (word 0)
+    //
+    // Unchanged from before:
+    //  - 0 matches            -> ring the bell
+    //  - 1 match               -> complete it, trailing space
+    //  - 2+ matches, LCP grows -> complete to the longest common
+    //                             prefix, no trailing space
+    //  - 2+ matches, LCP stuck -> bell on first TAB, list of all
+    //                             matches (alphabetical, two-space
+    //                             separated) on the second TAB
+    // =============================================================
+
+    private boolean handleCommandCompletion(String buffer) {
+
+        String prefix =
+                getCurrentWordPrefix(buffer);
+
+        List<String> matches =
+                resolveMatches(buffer, true, prefix);
+
+        // =====================================================
+        // NO MATCHES
+        // =====================================================
+
+        if (matches.isEmpty()) {
+
+            tabPressed = false;
+
+            terminal.writer().print("\007");
+            terminal.writer().flush();
+
+            return true;
+        }
+
+        // =====================================================
+        // ONE MATCH
+        // =====================================================
+
+        if (matches.size() == 1) {
+
+            String match =
+                    matches.get(0);
+
+            String separator =
+                    match.endsWith("/")
+                            ? ""
+                            : " ";
+
+            String completed =
+                    replacePrefix(
                             buffer,
-                            completingFirstWord,
-                            prefix
+                            match
+                    ) + separator;
+
+            setBuffer(completed);
+
+            tabPressed = false;
+
+            return true;
+        }
+
+        // =====================================================
+        // MULTIPLE MATCHES
+        // =====================================================
+
+        String commonPrefix =
+                longestCommonPrefix(matches);
+
+        // =====================================================
+        // LCP CAN EXTEND INPUT
+        // =====================================================
+
+        if (commonPrefix.length() > prefix.length()) {
+
+            String completed =
+                    replacePrefix(
+                            buffer,
+                            commonPrefix
                     );
 
-            // =====================================================
-            // NO MATCHES
-            // =====================================================
+            setBuffer(completed);
 
-            if (matches.isEmpty()) {
+            tabPressed = false;
 
-                tabPressed = false;
+            return true;
+        }
 
-                terminal.writer().print("\007");
-                terminal.writer().flush();
+        // =====================================================
+        // NO FURTHER LCP PROGRESS
+        // =====================================================
 
-                return true;
-            }
+        if (!tabPressed) {
 
-            // =====================================================
-            // ONE MATCH
-            // =====================================================
+            /*
+             * First TAB:
+             * just ring the bell.
+             */
+            terminal.writer().print("\007");
+            terminal.writer().flush();
 
-            if (matches.size() == 1) {
+            tabPressed = true;
 
-                String match =
-                        matches.get(0);
+            return true;
+        }
 
-                /*
-                 * Directory matches already carry a trailing '/'
-                 * (added in findMatchingFiles) and get no space,
-                 * so the user can immediately TAB into the next
-                 * path segment. Everything else (files, commands,
-                 * external completer candidates) gets a trailing
-                 * space as before.
-                 */
-                String separator =
-                        match.endsWith("/")
-                                ? ""
-                                : " ";
+        // =====================================================
+        // SECOND TAB
+        // =====================================================
 
-                String completed =
-                        replacePrefix(
-                                buffer,
-                                match
-                        ) + separator;
+        List<String> sorted =
+                new ArrayList<>(
+                        new TreeSet<>(matches)
+                );
 
-                setBuffer(completed);
+        terminal.writer().println();
 
-                tabPressed = false;
+        terminal.writer().println(
+                String.join("  ", sorted)
+        );
 
-                return true;
-            }
+        terminal.writer().flush();
 
-            // =====================================================
-            // MULTIPLE MATCHES
-            // =====================================================
+        tabPressed = false;
+
+        /*
+         * Restore prompt and input.
+         */
+        reader.callWidget(
+                LineReader.REDRAW_LINE
+        );
+
+        reader.callWidget(
+                LineReader.REDISPLAY
+        );
+
+        return true;
+    }
+
+    // =============================================================
+    // FILE / PATH / EXTERNAL-COMPLETER COMPLETION (word 1+)
+    //
+    //  - 0 matches            -> ring the bell
+    //  - 1 match               -> complete it directly, trailing
+    //                             space (unchanged from before)
+    //  - 2+ matches, LCP grows -> complete to the longest common
+    //                             prefix first (unchanged), no
+    //                             trailing space
+    //  - 2+ matches, LCP stuck -> CYCLE: each TAB press replaces
+    //                             the current word with the next
+    //                             candidate (wrapping back to the
+    //                             first after the last), instead
+    //                             of ringing the bell and listing
+    //                             them. No trailing space is added
+    //                             while cycling, so the word
+    //                             boundary stays put for the next
+    //                             TAB press. Typing anything else,
+    //                             or running a fresh completion
+    //                             elsewhere, changes the buffer
+    //                             away from what this method last
+    //                             wrote - detected below - which
+    //                             starts the match/LCP/cycle
+    //                             process over from scratch.
+    // =============================================================
+
+    private boolean handleFileCompletion(String buffer) {
+
+        boolean continuation =
+                cycleCandidates != null
+                        && cycleLastBuffer != null
+                        && buffer.equals(cycleLastBuffer);
+
+        String prefix =
+                getCurrentWordPrefix(buffer);
+
+        List<String> matches;
+
+        if (continuation) {
+
+            matches = cycleCandidates;
+
+        } else {
+
+            matches = resolveMatches(buffer, false, prefix);
+
+            resetCycleState();
+        }
+
+        // =====================================================
+        // NO MATCHES
+        // =====================================================
+
+        if (matches.isEmpty()) {
+
+            resetCycleState();
+
+            terminal.writer().print("\007");
+            terminal.writer().flush();
+
+            return true;
+        }
+
+        // =====================================================
+        // ONE MATCH
+        // =====================================================
+
+        if (matches.size() == 1) {
+
+            resetCycleState();
+
+            String match =
+                    matches.get(0);
+
+            /*
+             * Directory matches already carry a trailing '/'
+             * (added in findMatchingFiles) and get no space, so
+             * the user can immediately TAB into the next path
+             * segment. Everything else (files, external completer
+             * candidates) gets a trailing space as before.
+             */
+            String separator =
+                    match.endsWith("/")
+                            ? ""
+                            : " ";
+
+            String completed =
+                    replacePrefix(
+                            buffer,
+                            match
+                    ) + separator;
+
+            setBuffer(completed);
+
+            return true;
+        }
+
+        // =====================================================
+        // MULTIPLE MATCHES, NOT ALREADY CYCLING
+        //
+        // Try to extend to the longest common prefix first,
+        // exactly as before - only once that can't extend any
+        // further do we start cycling through the candidates.
+        // =====================================================
+
+        if (!continuation) {
 
             String commonPrefix =
                     longestCommonPrefix(matches);
-
-            // =====================================================
-            // LCP CAN EXTEND INPUT
-            // =====================================================
 
             if (commonPrefix.length() > prefix.length()) {
 
@@ -147,61 +347,34 @@ public class FileNameCompleter {
 
                 setBuffer(completed);
 
-                tabPressed = false;
+                resetCycleState();
 
                 return true;
             }
 
-            // =====================================================
-            // NO FURTHER LCP PROGRESS
-            // =====================================================
+            cycleCandidates = matches;
+            cycleIndex = 0;
 
-            if (!tabPressed) {
+        } else {
 
-                /*
-                 * First TAB:
-                 * just ring the bell.
-                 */
-                terminal.writer().print("\007");
-                terminal.writer().flush();
+            cycleIndex = (cycleIndex + 1) % matches.size();
+        }
 
-                tabPressed = true;
+        // =====================================================
+        // CYCLE TO THE NEXT CANDIDATE
+        // =====================================================
 
-                return true;
-            }
+        String candidate =
+                matches.get(cycleIndex);
 
-            // =====================================================
-            // SECOND TAB
-            // =====================================================
+        String completed =
+                replacePrefix(buffer, candidate);
 
-            List<String> sorted =
-                    new ArrayList<>(
-                            new TreeSet<>(matches)
-                    );
+        setBuffer(completed);
 
-            terminal.writer().println();
+        cycleLastBuffer = completed;
 
-            terminal.writer().println(
-                    String.join("  ", sorted)
-            );
-
-            terminal.writer().flush();
-
-            tabPressed = false;
-
-            /*
-             * Restore prompt and input.
-             */
-            reader.callWidget(
-                    LineReader.REDRAW_LINE
-            );
-
-            reader.callWidget(
-                    LineReader.REDISPLAY
-            );
-
-            return true;
-        };
+        return true;
     }
 
     // =============================================================
@@ -210,6 +383,13 @@ public class FileNameCompleter {
 
     public void resetTabState() {
         tabPressed = false;
+        resetCycleState();
+    }
+
+    private void resetCycleState() {
+        cycleCandidates = null;
+        cycleIndex = -1;
+        cycleLastBuffer = null;
     }
 
     // =============================================================

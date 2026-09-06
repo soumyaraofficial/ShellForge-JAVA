@@ -24,6 +24,25 @@ public class CommandExecutor {
         }
 
         // =========================================================
+        // PARAMETER EXPANSION ($NAME / ${NAME})
+        //
+        // Runs on the already-tokenized command, right after
+        // parsing/quoting and before anything else (pipe/background
+        // detection, redirection parsing, builtin dispatch, and
+        // external execution) looks at the tokens - so expanded
+        // values are available everywhere downstream exactly as if
+        // they'd been typed literally, while quoting/escaping rules
+        // above remain completely untouched.
+        // =========================================================
+
+        commandSplit =
+                ParameterExpansion.expandArguments(commandSplit);
+
+        if (commandSplit.isEmpty()) {
+            return currentDirectory;
+        }
+
+        // =========================================================
         // PIPELINES (|)
         //
         // Detected purely from the already-tokenized command, so
@@ -388,6 +407,25 @@ public class CommandExecutor {
                 );
 
                 return currentDirectory;
+
+            // -----------------------------------------------------
+            // DECLARE
+            // -----------------------------------------------------
+
+            case "declare":
+
+                new DeclareBuiltin().execute(
+                        cleanArgs,
+                        output,
+                        errorOutput
+                );
+
+                closeRedirectedStreams(
+                        output,
+                        errorOutput
+                );
+
+                return currentDirectory;
         }
 
         // =========================================================
@@ -398,6 +436,33 @@ public class CommandExecutor {
 
             ProcessBuilder processBuilder =
                     new ProcessBuilder(cleanArgs);
+
+            // -----------------------------------------------------
+            // STDIN
+            //
+            // Previously left at the ProcessBuilder default
+            // (Redirect.PIPE), which connects the child's stdin to
+            // a pipe the shell never writes to or closes - so the
+            // child never sees real terminal input, and typing
+            // Ctrl+D at the terminal has no effect on it (that EOF
+            // only applies to the shell's own stdin/JLine reader).
+            //
+            // A foreground external command not part of a pipeline
+            // has nothing else feeding its stdin, so it must
+            // inherit the real terminal stdin directly, exactly
+            // like stdout/stderr already do below when they aren't
+            // redirected.
+            //
+            // Background ("&") commands are left as they were -
+            // this fix only concerns foreground stdin handling.
+            // -----------------------------------------------------
+
+            if (!background) {
+
+                processBuilder.redirectInput(
+                        ProcessBuilder.Redirect.INHERIT
+                );
+            }
 
             // -----------------------------------------------------
             // STDOUT
@@ -871,6 +936,7 @@ public class CommandExecutor {
             case "complete":
             case "jobs":
             case "history":
+            case "declare":
                 return true;
 
             default:
@@ -931,6 +997,11 @@ public class CommandExecutor {
             case "history":
 
                 new HistoryBuiltin().execute(args, output, errorOutput);
+                return;
+
+            case "declare":
+
+                new DeclareBuiltin().execute(args, output, errorOutput);
                 return;
 
             default:

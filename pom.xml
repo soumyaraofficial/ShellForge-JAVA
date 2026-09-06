@@ -5,8 +5,8 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.codecrafters</groupId>
-    <artifactId>codecrafters-shell</artifactId>
+    <groupId>com.soumyaraj</groupId>
+    <artifactId>shellforge-java</artifactId>
     <version>1.0</version>
 
     <properties>
@@ -16,7 +16,6 @@
         <java.version>26</java.version>
     </properties>
 
-    <!-- Dependencies go here -->
     <dependencies>
 
         <dependency>
@@ -45,7 +44,7 @@
                 <artifactId>maven-assembly-plugin</artifactId>
 
                 <configuration>
-                    <finalName>codecrafters-shell</finalName>
+                    <finalName>shellforge-java</finalName>
 
                     <descriptorRefs>
                         <descriptorRef>
@@ -62,7 +61,7 @@
                         </manifest>
                     </archive>
 
-                    <outputDirectory>${dir}</outputDirectory>
+                    <outputDirectory>${project.build.directory}</outputDirectory>
                 </configuration>
 
                 <executions>
