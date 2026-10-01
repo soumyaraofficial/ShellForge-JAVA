@@ -426,7 +426,27 @@ public class CommandExecutor {
                 );
 
                 return currentDirectory;
+
+            //----------------------------------------------------
+            // AI
+            // ------------------------------
+            case "ai":
+
+                new AIBuiltin().execute(
+                        cleanArgs,
+                        output,
+                        errorOutput
+                );
+
+                closeRedirectedStreams(
+                        output,
+                        errorOutput
+                );
+
+                return currentDirectory;
         }
+
+
 
         // =========================================================
         // EXTERNAL COMMANDS
@@ -569,6 +589,8 @@ public class CommandExecutor {
                     cleanArgs.get(0)
                             + ": command not found"
             );
+
+            settleConsole(errorOutput);
         }
 
         // =========================================================
@@ -581,6 +603,33 @@ public class CommandExecutor {
         );
 
         return currentDirectory;
+    }
+
+    // =================================================================
+    // SETTLE CONSOLE
+    //
+    // IDE consoles read stdout and stderr through separate pipes, so a
+    // message written to System.err can show up AFTER the next prompt
+    // (which JLine writes to stdout). Flush both streams and give the
+    // console a brief moment to render the message before the prompt
+    // is drawn. Only applies to the real console, not redirected files.
+    // =================================================================
+
+    private static void settleConsole(PrintStream stream) {
+
+        stream.flush();
+
+        if (stream != System.err) {
+            return;
+        }
+
+        System.out.flush();
+
+        try {
+            Thread.sleep(50);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     // =================================================================
@@ -712,6 +761,8 @@ public class CommandExecutor {
                         name + ": command not found"
                 );
 
+                settleConsole(stageError);
+
                 if (stageError != System.err) {
                     stageError.close();
                 }
@@ -744,8 +795,8 @@ public class CommandExecutor {
                 PrintStream stageOutput =
                         isLast
                                 ? openOutputStream(
-                                        redirection.stdoutFile,
-                                        redirection.stdoutAppend)
+                                redirection.stdoutFile,
+                                redirection.stdoutAppend)
                                 : new PrintStream(capture);
 
                 PrintStream stageError =
@@ -937,6 +988,7 @@ public class CommandExecutor {
             case "jobs":
             case "history":
             case "declare":
+            case "ai":
                 return true;
 
             default:
@@ -1002,6 +1054,11 @@ public class CommandExecutor {
             case "declare":
 
                 new DeclareBuiltin().execute(args, output, errorOutput);
+                return;
+
+            case "ai":
+
+                new AIBuiltin().execute(args, output, errorOutput);
                 return;
 
             default:

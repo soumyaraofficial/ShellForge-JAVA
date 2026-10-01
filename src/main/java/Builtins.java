@@ -19,6 +19,7 @@ public final class Builtins {
         NAMES.add("jobs");
         NAMES.add("history");
         NAMES.add("declare");
+        NAMES.add("ai");
     }
 
     // =============================================================
