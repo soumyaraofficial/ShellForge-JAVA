@@ -297,11 +297,12 @@ Directory: file/dir counts, total size, file-type breakdown.
 </td>
 </tr>
 <tr>
-<td align="center"><img src="docs/screenshots/%20tree.png" alt="tree"/></td>
-<td align="center"><img src="docs/screenshots/findx.png" alt="findx"/></td>
-<td align="center"><img src="docs/screenshots/inspect.png" alt="inspect"/></td>
+<td align="center"><img src="docs/screenshots/tree1.png" alt="tree"/></td>
+<td align="center"><img src="docs/screenshots/findx1.png" alt="findx"/></td>
+<td align="center"><img src="docs/screenshots/inspect1.png" alt="inspect"/></td>
 </tr>
 </table>
+
 
 <details>
 <summary><b>Details: ignored paths, searchable files, error messages</b></summary>
