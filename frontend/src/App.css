@@ -1,0 +1,440 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=VT323&display=swap");
+
+/* =========================================
+   TOKENS
+   ========================================= */
+
+:root {
+  --bg: #070503;
+  --panel-top: #100d09;
+  --panel-bottom: #0a0806;
+  --screen: #0c0905; /* darker, close to the navbar tone */
+
+  --amber: #ffb000;
+  --amber-hi: #ffd060;
+  --amber-dim: #9a6e12;
+  --amber-faint: #4a3510;
+  --label: #7a6232;
+  --alert: #c2573a;
+
+  --line: rgba(255, 176, 0, 0.14);
+  --line-strong: rgba(255, 176, 0, 0.3);
+
+  --font-display: "VT323", "Courier New", monospace;
+  --font-ui: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body,
+#root,
+.app {
+  text-align: left;
+}
+
+body {
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--amber);
+  font-family: var(--font-ui);
+}
+
+::selection {
+  background: var(--amber);
+  color: #120a00;
+}
+
+/* =========================================
+   APP + FRAME
+   ========================================= */
+
+.app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 2.2vw, 32px);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 150, 0, 0.06), transparent 55%),
+    var(--bg);
+}
+
+.frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-width: 1680px;
+  max-height: 960px;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); /* stops the terminal overflowing the frame */
+  grid-template-rows: auto minmax(0, 1fr) auto;
+
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 220, 150, 0.05);
+}
+
+/* corner brackets */
+.frame::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.55;
+  background:
+    linear-gradient(var(--amber-dim), var(--amber-dim)) top left / 14px 1px no-repeat,
+    linear-gradient(var(--amber-dim), var(--amber-dim)) top left / 1px 14px no-repeat,
+    linear-gradient(var(--amber-dim), var(--amber-dim)) top right / 14px 1px no-repeat,
+    linear-gradient(var(--amber-dim), var(--amber-dim)) top right / 1px 14px no-repeat,
+    linear-gradient(var(--amber-dim), var(--amber-dim)) bottom left / 14px 1px no-repeat,
+    linear-gradient(var(--amber-dim), var(--amber-dim)) bottom left / 1px 14px no-repeat,
+    linear-gradient(var(--amber-dim), var(--amber-dim)) bottom right / 14px 1px no-repeat,
+    linear-gradient(var(--amber-dim), var(--amber-dim)) bottom right / 1px 14px no-repeat;
+}
+
+/* =========================================
+   MASTHEAD
+   ========================================= */
+
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 28px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.brand-mark {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: rgba(255, 176, 0, 0.04);
+
+  color: var(--amber);
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(255, 176, 0, 0.55);
+}
+
+.brand-name {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+
+  color: var(--amber-hi);
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.5em;
+  text-shadow: 0 0 10px rgba(255, 176, 0, 0.35);
+}
+
+.brand-tag {
+  color: var(--amber-dim);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-shadow: none;
+}
+
+.brand-sub {
+  margin: 8px 0 0;
+  color: var(--label);
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+}
+
+/* ---------- readouts ---------- */
+
+.readouts {
+  margin: 0;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.readout {
+  padding: 2px 22px;
+  border-left: 1px solid var(--line);
+}
+
+.readout:last-child {
+  padding-right: 0;
+}
+
+.readout dt {
+  margin-bottom: 5px;
+  color: var(--label);
+  font-size: 9.5px;
+  letter-spacing: 0.24em;
+}
+
+.readout dd {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--amber);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+
+.led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 8px rgba(255, 176, 0, 0.8);
+  animation: pulse 2.6s ease-in-out infinite;
+}
+
+.app[data-link="connecting"] .led {
+  background: var(--amber-dim);
+  box-shadow: none;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.app[data-link="offline"] .led {
+  background: var(--alert);
+  box-shadow: 0 0 8px rgba(194, 87, 58, 0.7);
+  animation: none;
+}
+
+.app[data-link="offline"] .readout:first-child dd {
+  color: var(--alert);
+}
+
+/* =========================================
+   SCREEN
+   ========================================= */
+
+.screen-wrap {
+  min-width: 0; /* lets the grid cell shrink to the frame */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 20px 14px;
+}
+
+.sub-bar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 8px 9px;
+  color: var(--label);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+}
+
+.terminal-container {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  cursor: text;
+
+  /* padding lives here, not on .terminal, so xterm's fit math stays correct */
+  padding: 24px 32px;
+
+  border: 1px solid var(--line);
+  border-radius: 24px; /* identical on all four corners */
+
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    #17110a 0%,
+    var(--screen) 60%,
+    #060403 100%
+  );
+
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.7),
+    0 0 0 3px #080604;
+}
+
+/* scanlines only (the SVG noise layer was the main source of lag) */
+.terminal-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2px,
+    rgba(0, 0, 0, 0.14) 3px
+  );
+}
+
+/* glass: soft highlight + vignette */
+.terminal-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 28% 0%, rgba(255, 220, 150, 0.05), transparent 45%),
+    radial-gradient(ellipse at center, transparent 58%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+.terminal {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+}
+
+.xterm {
+  height: 100%;
+  text-align: left;
+}
+
+.terminal .xterm-rows {
+  text-align: left;
+}
+
+.xterm-viewport {
+  background: transparent !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--amber-faint) transparent;
+}
+
+.xterm-viewport::-webkit-scrollbar {
+  width: 6px;
+}
+
+.xterm-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background: var(--amber-faint);
+  border-radius: 10px;
+}
+
+/* =========================================
+   STATUS BAR
+   ========================================= */
+
+.statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 0 28px;
+  border-top: 1px solid var(--line);
+  color: var(--label);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+}
+
+/* =========================================
+   MOTION
+   ========================================= */
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .led {
+    animation: none;
+  }
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 960px) {
+  .masthead {
+    padding: 14px 20px 12px;
+  }
+
+  .brand-name {
+    font-size: 24px;
+    letter-spacing: 0.4em;
+  }
+
+  .readout:not(:first-child) {
+    display: none;
+  }
+
+  .readout {
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .app {
+    padding: 0;
+  }
+
+  .frame {
+    max-width: none;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+  }
+
+  .frame::before,
+  .brand-sub,
+  .brand-tag,
+  .sub-bar,
+  .statusbar span:last-child {
+    display: none;
+  }
+
+  .screen-wrap {
+    padding: 10px;
+  }
+
+  .terminal-container {
+    padding: 14px;
+  }
+}

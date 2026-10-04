@@ -1,3 +1,4 @@
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -457,6 +458,12 @@ public class CommandExecutor {
             ProcessBuilder processBuilder =
                     new ProcessBuilder(cleanArgs);
 
+            // Run the external command from the shell's
+            // current working directory.
+            processBuilder.directory(
+                    currentDirectory.toFile()
+            );
+
             // -----------------------------------------------------
             // STDIN
             //
@@ -831,6 +838,12 @@ public class CommandExecutor {
 
                 ProcessBuilder processBuilder =
                         new ProcessBuilder(redirection.cleanArgs);
+
+                // Run every pipeline stage from the shell's
+                // current working directory.
+                processBuilder.directory(
+                        currentDirectory.toFile()
+                );
 
                 // ---------------------------------------------------
                 // STDOUT
