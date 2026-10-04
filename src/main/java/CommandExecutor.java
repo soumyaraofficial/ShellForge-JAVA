@@ -13,6 +13,8 @@ import java.util.List;
 import org.jline.reader.LineReader;
 
 public class CommandExecutor {
+    private String lastCommand;
+    private String lastError;
     private LineReader reader;
 
     public void setReader(LineReader reader) {
@@ -21,6 +23,10 @@ public class CommandExecutor {
     public Path execute(
             String command,
             Path currentDirectory) throws Exception {
+        if (!command.trim().equalsIgnoreCase("ai fix")) {
+            lastCommand = command;
+            lastError = null;
+        }
 
         List<String> commandSplit =
                 Quoting.parseCommand(command);
@@ -451,6 +457,179 @@ public class CommandExecutor {
                 );
 
                 return currentDirectory;
+
+            case "project":
+
+                if (cleanArgs.size() > 1
+                        && cleanArgs.get(1).equalsIgnoreCase("analyze")) {
+
+                    ProjectBuiltin.analyze(currentDirectory);
+
+                } else {
+
+                    ProjectBuiltin.execute(currentDirectory);
+                }
+
+                return currentDirectory;
+
+
+            case "inspect":
+
+                if (cleanArgs.size() < 2) {
+
+                    errorOutput.println(
+                            "inspect: missing file or directory"
+                    );
+
+                    closeRedirectedStreams(
+                            output,
+                            errorOutput
+                    );
+
+                    return currentDirectory;
+                }
+
+                Path inspectPath = currentDirectory
+                        .resolve(cleanArgs.get(1))
+                        .normalize();
+
+                InspectBuiltin.execute(inspectPath);
+
+                closeRedirectedStreams(
+                        output,
+                        errorOutput
+                );
+
+                return currentDirectory;
+
+            case "tree":
+
+                Path treeDirectory = currentDirectory;
+                int depth = 5;
+
+                // tree 2
+                if (cleanArgs.size() > 1
+                        && cleanArgs.get(1).matches("\\d+")) {
+
+                    depth = Integer.parseInt(cleanArgs.get(1));
+
+                }
+
+                // tree src
+                else if (cleanArgs.size() > 1) {
+
+                    String pathArg = cleanArgs.get(1);
+
+                    treeDirectory = currentDirectory
+                            .resolve(pathArg)
+                            .normalize();
+
+                    // tree src 2
+                    if (cleanArgs.size() > 2) {
+
+                        String depthArg = cleanArgs.get(2);
+
+                        if (!depthArg.matches("\\d+")) {
+
+                            errorOutput.println(
+                                    "tree: depth must be a number"
+                            );
+
+                            closeRedirectedStreams(
+                                    output,
+                                    errorOutput
+                            );
+
+                            return currentDirectory;
+                        }
+
+                        depth = Integer.parseInt(depthArg);
+                    }
+                }
+
+                if (!Files.isDirectory(treeDirectory)) {
+
+                    errorOutput.println(
+                            "tree: directory not found: "
+                                    + treeDirectory
+                    );
+
+                    closeRedirectedStreams(
+                            output,
+                            errorOutput
+                    );
+
+                    return currentDirectory;
+                }
+
+                TreeBuiltin.execute(
+                        treeDirectory,
+                        depth
+                );
+
+                closeRedirectedStreams(
+                        output,
+                        errorOutput
+                );
+
+                return currentDirectory;
+
+            case "findx":
+
+                if (cleanArgs.size() < 2) {
+
+                    errorOutput.println(
+                            "findx: missing search term"
+                    );
+
+                    closeRedirectedStreams(
+                            output,
+                            errorOutput
+                    );
+
+                    return currentDirectory;
+                }
+
+                String searchTerm = cleanArgs.get(1);
+
+                Path searchDirectory = currentDirectory;
+
+                if (cleanArgs.size() > 2) {
+
+                    searchDirectory = currentDirectory
+                            .resolve(cleanArgs.get(2))
+                            .normalize();
+                }
+
+                if (!Files.isDirectory(searchDirectory)) {
+
+                    errorOutput.println(
+                            "findx: directory not found: "
+                                    + searchDirectory
+                    );
+
+                    closeRedirectedStreams(
+                            output,
+                            errorOutput
+                    );
+
+                    return currentDirectory;
+                }
+
+                FindxBuiltin.execute(
+                        searchDirectory,
+                        searchTerm
+                );
+
+                closeRedirectedStreams(
+                        output,
+                        errorOutput
+                );
+
+                return currentDirectory;
+
+
+
         }
 
 
@@ -598,10 +777,12 @@ public class CommandExecutor {
             // COMMAND NOT FOUND
             // -----------------------------------------------------
 
-            errorOutput.println(
+
+            lastError =
                     cleanArgs.get(0)
-                            + ": command not found"
-            );
+                            + ": command not found";
+
+            errorOutput.println(lastError);
 
             settleConsole(errorOutput);
         }
@@ -1008,6 +1189,8 @@ public class CommandExecutor {
             case "history":
             case "declare":
             case "ai":
+            case "project":
+            case "tree":
                 return true;
 
             default:
@@ -1088,6 +1271,15 @@ public class CommandExecutor {
                 );
 
                 return;
+
+            case "project":
+                ProjectBuiltin.execute(currentDirectory);
+                return;
+
+            case "tree":
+                TreeBuiltin.execute(currentDirectory, 3);
+                return;
+
 
             default:
                 // Unreachable: only names accepted by
@@ -1510,5 +1702,13 @@ public class CommandExecutor {
         }
 
         return null;
+    }
+
+    public String getLastCommand() {
+        return lastCommand;
+    }
+
+    public String getLastError() {
+        return lastError;
     }
 }

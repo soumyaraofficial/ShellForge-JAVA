@@ -24,6 +24,7 @@ public class AIBuiltin {
     private static final String MODEL =
             "qwen2.5:3b";
 
+
     // =============================================================
     // COMMAND GENERATION PROMPT
     // =============================================================
@@ -49,6 +50,7 @@ public class AIBuiltin {
             User: show files in the current directory
             Output: ls
             """;
+
 
     // =============================================================
     // EXPLANATION PROMPT
@@ -82,6 +84,50 @@ public class AIBuiltin {
             -name "hello.txt" searches for an exact name match.
             """;
 
+
+    // =============================================================
+    // FIX PROMPT
+    // =============================================================
+
+    private static final String FIX_PROMPT = """
+            You are an AI assistant inside a Unix-like shell.
+
+            The user will provide:
+            1. The shell command that failed.
+            2. The error message produced by that command.
+
+            Diagnose the problem and suggest the correct fix.
+
+            Your response MUST contain exactly:
+
+            Problem:
+            <short explanation of what went wrong>
+
+            Fix:
+            <correct shell command>
+
+            Do not execute the command.
+            Do not use markdown code fences.
+            Keep the explanation concise.
+
+            Example:
+
+            Command:
+            mkdir test
+
+            Error:
+            mkdir: test: File exists
+
+            Response:
+
+            Problem:
+            The directory "test" already exists.
+
+            Fix:
+            mkdir -p test
+            """;
+
+
     // =============================================================
     // MAIN AI BUILTIN
     // =============================================================
@@ -106,16 +152,19 @@ public class AIBuiltin {
             return;
         }
 
+
         // =========================================================
         // CHECK MODE
         //
         // ai <question>
         // ai execute <question>
         // ai explain <command>
+        // ai fix
         // =========================================================
 
         String mode =
                 args.get(1);
+
 
         // =========================================================
         // EXPLAIN MODE
@@ -132,12 +181,29 @@ public class AIBuiltin {
             return;
         }
 
+
+        // =========================================================
+        // FIX MODE
+        // =========================================================
+
+        if (mode.equalsIgnoreCase("fix")) {
+
+            executeFix(
+                    output,
+                    errorOutput
+            );
+
+            return;
+        }
+
+
         // =========================================================
         // EXECUTE MODE
         // =========================================================
 
         boolean executeCommand =
                 mode.equalsIgnoreCase("execute");
+
 
         // =========================================================
         // BUILD QUESTION
@@ -149,6 +215,7 @@ public class AIBuiltin {
         int questionStart =
                 executeCommand ? 2 : 1;
 
+
         if (args.size() <= questionStart) {
 
             errorOutput.println(
@@ -157,6 +224,7 @@ public class AIBuiltin {
 
             return;
         }
+
 
         for (
                 int i = questionStart;
@@ -173,6 +241,7 @@ public class AIBuiltin {
             );
         }
 
+
         // =========================================================
         // ASK OLLAMA FOR COMMAND
         // =========================================================
@@ -184,6 +253,7 @@ public class AIBuiltin {
                             COMMAND_PROMPT,
                             question.toString()
                     ).trim();
+
 
             // =====================================================
             // SHOW AI SUGGESTION
@@ -201,6 +271,7 @@ public class AIBuiltin {
 
             output.println();
 
+
             // =====================================================
             // NORMAL "ai" MODE
             //
@@ -212,6 +283,7 @@ public class AIBuiltin {
 
                 return;
             }
+
 
             // =====================================================
             // "ai execute" MODE
@@ -228,6 +300,7 @@ public class AIBuiltin {
             String answer =
                     reader.readLine();
 
+
             // =====================================================
             // CANCEL
             // =====================================================
@@ -243,6 +316,7 @@ public class AIBuiltin {
 
                 return;
             }
+
 
             // =====================================================
             // EXECUTE APPROVED COMMAND
@@ -261,6 +335,7 @@ public class AIBuiltin {
                     "Executed"
             );
 
+
         } catch (Exception e) {
 
             errorOutput.println(
@@ -268,6 +343,7 @@ public class AIBuiltin {
             );
         }
     }
+
 
     // =============================================================
     // EXPLAIN COMMAND
@@ -291,12 +367,14 @@ public class AIBuiltin {
             return;
         }
 
+
         // =========================================================
         // BUILD COMMAND STRING
         // =========================================================
 
         StringBuilder command =
                 new StringBuilder();
+
 
         for (
                 int i = 2;
@@ -313,6 +391,7 @@ public class AIBuiltin {
             );
         }
 
+
         // =========================================================
         // ASK OLLAMA
         // =========================================================
@@ -324,6 +403,7 @@ public class AIBuiltin {
                             EXPLAIN_PROMPT,
                             command.toString()
                     ).trim();
+
 
             // =====================================================
             // SHOW EXPLANATION
@@ -341,6 +421,7 @@ public class AIBuiltin {
 
             output.println();
 
+
         } catch (Exception e) {
 
             errorOutput.println(
@@ -349,6 +430,121 @@ public class AIBuiltin {
             );
         }
     }
+
+
+    // =============================================================
+    // FIX COMMAND
+    // =============================================================
+
+    private void executeFix(
+            PrintStream output,
+            PrintStream errorOutput) {
+
+        // =========================================================
+        // GET LAST COMMAND
+        // =========================================================
+
+        String lastCommand =
+                executor.getLastCommand();
+
+
+        // =========================================================
+        // GET LAST ERROR
+        // =========================================================
+
+        String lastError =
+                executor.getLastError();
+
+
+        // =========================================================
+        // CHECK COMMAND
+        // =========================================================
+
+        if (
+                lastCommand == null
+                        || lastCommand.isBlank()
+        ) {
+
+            errorOutput.println(
+                    "ai fix: no previous command found"
+            );
+
+            return;
+        }
+
+
+        // =========================================================
+        // CHECK ERROR
+        // =========================================================
+
+        if (
+                lastError == null
+                        || lastError.isBlank()
+        ) {
+
+            errorOutput.println(
+                    "ai fix: no error found"
+            );
+
+            return;
+        }
+
+
+        // =========================================================
+        // BUILD AI PROMPT
+        // =========================================================
+
+        String prompt = """
+                Command:
+                %s
+
+                Error:
+                %s
+                """.formatted(
+                lastCommand,
+                lastError
+        );
+
+
+        // =========================================================
+        // ASK OLLAMA
+        // =========================================================
+
+        try {
+
+            String response =
+                    askOllama(
+                            FIX_PROMPT,
+                            prompt
+                    ).trim();
+
+
+            // =====================================================
+            // SHOW AI DIAGNOSIS
+            // =====================================================
+
+            output.println();
+
+            output.println(
+                    "AI diagnosis:"
+            );
+
+            output.println(
+                    response
+            );
+
+            output.println();
+
+
+        } catch (Exception e) {
+
+            errorOutput.println(
+                    "ai fix: "
+                            + e.getMessage()
+            );
+        }
+    }
+
 
     // =============================================================
     // ASK OLLAMA
@@ -373,6 +569,7 @@ public class AIBuiltin {
                 escapeJson(prompt)
         );
 
+
         // =========================================================
         // HTTP CLIENT
         // =========================================================
@@ -383,6 +580,7 @@ public class AIBuiltin {
                                 Duration.ofSeconds(5)
                         )
                         .build();
+
 
         // =========================================================
         // HTTP REQUEST
@@ -408,6 +606,7 @@ public class AIBuiltin {
                         )
                         .build();
 
+
         // =========================================================
         // SEND REQUEST
         // =========================================================
@@ -418,6 +617,7 @@ public class AIBuiltin {
                         HttpResponse.BodyHandlers
                                 .ofString()
                 );
+
 
         // =========================================================
         // CHECK RESPONSE
@@ -431,6 +631,7 @@ public class AIBuiltin {
             );
         }
 
+
         // =========================================================
         // EXTRACT RESPONSE
         // =========================================================
@@ -439,6 +640,7 @@ public class AIBuiltin {
                 response.body()
         ).trim();
     }
+
 
     // =============================================================
     // EXTRACT "response" FROM OLLAMA JSON
@@ -451,8 +653,10 @@ public class AIBuiltin {
         String marker =
                 "\"response\":\"";
 
+
         int start =
                 json.indexOf(marker);
+
 
         if (start == -1) {
 
@@ -461,12 +665,15 @@ public class AIBuiltin {
             );
         }
 
+
         start += marker.length();
+
 
         StringBuilder result =
                 new StringBuilder();
 
         boolean escaped = false;
+
 
         for (
                 int i = start;
@@ -476,6 +683,7 @@ public class AIBuiltin {
 
             char c =
                     json.charAt(i);
+
 
             // =====================================================
             // ESCAPED CHARACTER
@@ -511,13 +719,16 @@ public class AIBuiltin {
 
                 escaped = false;
 
+
             } else if (c == '\\') {
 
                 escaped = true;
 
+
             } else if (c == '"') {
 
                 break;
+
 
             } else {
 
@@ -525,8 +736,10 @@ public class AIBuiltin {
             }
         }
 
+
         return result.toString();
     }
+
 
     // =============================================================
     // ESCAPE JSON STRING

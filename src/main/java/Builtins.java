@@ -20,6 +20,11 @@ public final class Builtins {
         NAMES.add("history");
         NAMES.add("declare");
         NAMES.add("ai");
+        NAMES.add("project");
+        NAMES.add("tree");
+        NAMES.add("findx");
+        NAMES.add("inspect");
+
     }
 
     // =============================================================
