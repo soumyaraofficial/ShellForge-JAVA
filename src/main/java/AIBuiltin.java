@@ -713,6 +713,37 @@ public class AIBuiltin {
                         result.append('\\');
                         break;
 
+                    case 'u':
+
+                        if (i + 4 < json.length()) {
+
+                            String unicode =
+                                    json.substring(i + 1, i + 5);
+
+                            try {
+
+                                char decoded =
+                                        (char) Integer.parseInt(
+                                                unicode,
+                                                16
+                                        );
+
+                                result.append(decoded);
+
+                                i += 4;
+
+                            } catch (NumberFormatException e) {
+
+                                result.append('u');
+                            }
+
+                        } else {
+
+                            result.append('u');
+                        }
+
+                        break;
+
                     default:
                         result.append(c);
                 }

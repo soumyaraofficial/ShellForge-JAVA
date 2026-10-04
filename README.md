@@ -1,819 +1,652 @@
-# ShellForge-JAVA
+<div align="center">
 
-A Java-based Unix-like developer shell with an interactive terminal experience, AI-assisted commands, process management, developer-focused project inspection tools, and a React-based web terminal.
+# `>_` SHELLFORGE
+### A Unix-style shell built from scratch in Java — with a local AI assistant and a retro browser terminal
 
----
+<br/>
 
-## Overview
+![Java](https://img.shields.io/badge/Java-26-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Maven](https://img.shields.io/badge/Maven-Build-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white)
+![JLine](https://img.shields.io/badge/JLine-3.30.0-4B5563?style=for-the-badge)
+![Ollama](https://img.shields.io/badge/Ollama-qwen2.5%3A3b-000000?style=for-the-badge&logo=ollama&logoColor=white)
 
-**ShellForge-JAVA** is a custom shell built in Java that combines traditional Unix shell functionality with developer-oriented tooling and a local AI assistant.
+![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![xterm.js](https://img.shields.io/badge/xterm.js-6-FFB000?style=for-the-badge)
+![WebSocket](https://img.shields.io/badge/WebSocket-Java--WebSocket-010101?style=for-the-badge)
 
-The project started as a command-line shell implementation and evolved into a developer-focused terminal environment supporting:
+<br/>
 
-- Command parsing and quoting
-- Pipelines and redirection
-- Background processes and job management
-- Command history and tab completion
-- AI-assisted command generation and explanation
-- Project structure and technology analysis
-- Recursive source-code search
-- File and directory inspection
-- A browser-based terminal using React and xterm.js
-- PTY-based communication between the browser and Java shell
+[Features](#-features) •
+[Quick Start](#-quick-start) •
+[Commands](#-built-in-commands) •
+[AI](#-ai-assistant) •
+[Web Terminal](#-web-terminal) •
+[Architecture](#-architecture) •
+[Limitations](#-limitations)
 
-The AI functionality runs locally through **Ollama**, allowing natural-language interaction without requiring a cloud AI API.
+<br/>
 
----
+![ShellForge main terminal](docs/screenshots/main-shell.png)
 
-## Key Features
+<sub>Main ShellForge terminal demonstrating core commands</sub>
 
-### Shell Engine
+</div>
 
-ShellForge provides core shell functionality including:
-
-- External command execution
-- Built-in commands
-- Command parsing and quoting
-- Environment variable expansion
-- Pipelines
-- Standard output redirection
-- Standard error redirection
-- Append redirection
-- Background processes
-- Job management
-- Command history
-- Command completion
-- File-name completion
-
-Example:
-
-```bash
-$ echo "Hello ShellForge"
-Hello ShellForge
-
-$ echo "Hello" > hello.txt
-
-$ cat hello.txt
-Hello
-```
-
-#screenshot
-Suggested screenshot: ShellForge running basic shell commands such as `pwd`, `echo`, `ls`, redirection, and a pipeline.
+<br/>
 
 ---
 
-### Developer Tools
+## ✨ Features
 
-ShellForge includes custom commands designed specifically for working with software projects.
+<table>
+<tr>
+<td width="50%" valign="top">
 
-#### `project`
+### 🐚 Shell engine
+- Hand-written **quote / escape tokenizer**
+- `$NAME` / `${NAME}` **variable expansion** + `declare`
+- **Pipelines** — external *and* built-in stages
+- **Redirection** — `>` `>>` `2>` `2>>` `1>` `1>>`
+- **Background jobs** with `jobs` and auto-reaping
+- **Persistent history** via `HISTFILE`
+- **Custom TAB completion** with cycling and pluggable completer scripts
 
-Analyzes the current project and provides developer-focused information such as:
+</td>
+<td width="50%" valign="top">
 
-- Programming languages
-- Build tools
-- Project structure
-- Git information
-- Source directories
-- Test directories
-- File statistics
-- Detected technologies and frameworks
+### 🤖 Local AI &nbsp;·&nbsp; 🛠 Dev tools &nbsp;·&nbsp; 🌐 Web
+- `ai` — natural language → shell command
+- `ai execute` — run it after **y/N confirmation**
+- `ai explain` / `ai fix`
+- `project` / `project analyze` — metadata + AI summary
+- `tree`, `findx`, `inspect`
+- **Browser terminal**: React + xterm.js ↔ WebSocket ↔ PTY ↔ ShellForge
+- Retro **amber CRT** look with scanlines and live status readouts
 
-Example:
+</td>
+</tr>
+</table>
 
-```bash
-$ project
-```
-
-#screenshot
-Suggested screenshot: The `project` command showing the project's languages, build system, Git information, source/test directories, file statistics, and detected technologies.
-
----
-
-#### `tree`
-
-Displays the directory structure with configurable depth.
-
-```bash
-$ tree
-```
-
-```bash
-$ tree 2
-```
-
-```bash
-$ tree src/main/java 2
-```
-
-Generated directories such as `.git`, `target`, `node_modules`, `build`, `dist`, and `.idea` are ignored.
-
-#screenshot
-Suggested screenshot: `tree src/main/java 2` showing the Java project structure.
+> [!NOTE]
+> All AI features run **locally** through [Ollama](https://ollama.com). The code makes no cloud API calls.
 
 ---
 
-#### `findx`
+## 🚀 Quick Start
 
-Performs recursive text searches across source and project files.
+### Requirements
 
-```bash
-$ findx import
-```
+| Tool | Needed for | Notes |
+|---|---|---|
+| **JDK 26** | Everything | `pom.xml` sets `maven.compiler.release` to `26` |
+| **Maven** | Building | |
+| **Ollama** + `qwen2.5:3b` | `ai`, `project analyze` | Optional |
+| **Node.js + npm** | Web terminal frontend | Optional |
 
-Example output:
+> [!IMPORTANT]
+> ShellForge is written for **macOS**. Windows has not been addressed in the code and is not claimed to work.
 
-```text
-src/main/java/Shell.java
-  1: import java.io.IOException;
-  2: import java.nio.file.Path;
-
-src/main/java/CommandExecutor.java
-  1: import java.io.PrintStream;
-
-────────────────────────────
-12 matches in 4 files
-```
-
-`findx` focuses on common source and project file formats while ignoring generated directories and common dependency lock files.
-
-#screenshot
-Suggested screenshot: `findx import` showing grouped file results and matching line numbers.
-
----
-
-#### `inspect`
-
-Provides information about files and directories.
-
-For a file:
-
-```bash
-$ inspect src/main/java/AIBuiltin.java
-```
-
-Example information includes:
-
-```text
-Inspect
-────────────────────────────
-Path       : src/main/java/AIBuiltin.java
-Type       : Java Source File
-Size       : 18.97 KB
-Lines      : 773
-Modified   : ...
-────────────────────────────
-```
-
-For a directory:
-
-```bash
-$ inspect src/main/java
-```
-
-The directory inspection reports:
-
-- Number of files
-- Number of directories
-- Total size
-- File-type distribution
-- Last modified time
-
-#screenshot
-Suggested screenshot: `inspect src/main/java` showing file count, directory count, total size, and file-type distribution.
-
----
-
-## AI Assistant
-
-ShellForge integrates with **Ollama** to provide a local AI assistant directly inside the shell.
-
-The current implementation uses:
-
-```text
-qwen2.5:3b
-```
-
-The AI assistant can:
-
-- Generate shell commands
-- Explain commands
-- Execute AI-generated commands with confirmation
-- Help diagnose shell errors
-
-### Generate a Command
-
-```bash
-$ ai create a file named hello.txt
-```
-
-The AI returns a suggested shell command instead of immediately executing it.
-
-#screenshot
-Suggested screenshot: `ai create a file named hello.txt` showing the generated command.
-
----
-
-### Execute an AI-Generated Command
-
-```bash
-$ ai execute create a file named hello.txt
-```
-
-ShellForge generates the command and asks for confirmation before execution.
-
-This provides an additional safety layer instead of blindly executing AI-generated commands.
-
-#screenshot
-Suggested screenshot: `ai execute ...` showing the generated command and confirmation prompt.
-
----
-
-### Explain a Command
-
-```bash
-$ ai explain "find . -name '*.java'"
-```
-
-The AI explains what the command does and how its individual parts work.
-
-#screenshot
-Suggested screenshot: `ai explain ...` showing the AI explanation.
-
----
-
-### Fix the Last Failed Command
-
-```bash
-$ ai fix
-```
-
-ShellForge uses information from the previous shell command and its captured error to request a possible correction from the local AI model.
-
-#screenshot
-Suggested screenshot: A failed command followed by `ai fix` and the suggested correction.
-
----
-
-## Web Terminal
-
-ShellForge also includes a browser-based terminal interface.
-
-The web terminal is built using:
-
-- React
-- xterm.js
-- WebSocket
-- Java WebSocket
-- PTY4J
-
-The architecture allows the browser terminal to communicate with a real Java shell process through a pseudo-terminal.
-
-```text
-Browser
-   │
-   │ WebSocket
-   ▼
-WebServer
-   │
-   │ PTY
-   ▼
-ShellForge-JAVA
-   │
-   ├── Shell
-   ├── CommandExecutor
-   ├── Builtins
-   ├── JobManager
-   └── AI Assistant
-```
-
-The frontend provides a terminal-style interface while the Java backend handles the actual shell execution.
-
-#screenshot
-Suggested screenshot: Main retro-style ShellForge web terminal interface.
-
-#screenshot
-Suggested screenshot: A closer view of the terminal area showing the retro CRT/grain/glitch styling.
-
----
-
-## Built-in Commands
-
-| Command | Description |
-|---|---|
-| `echo` | Print text |
-| `cd` | Change directory |
-| `pwd` | Print current directory |
-| `type` | Identify a command |
-| `history` | Display command history |
-| `jobs` | Display background jobs |
-| `declare` | Manage shell variables |
-| `complete` | Configure command completion |
-| `ai` | Interact with the local AI assistant |
-| `project` | Analyze the current project |
-| `tree` | Display directory structure |
-| `findx` | Search project files recursively |
-| `inspect` | Inspect files and directories |
-| `exit` | Exit the shell |
-
----
-
-## Example Usage
-
-### Basic Shell Commands
-
-```bash
-$ pwd
-
-$ cd src
-
-$ ls
-
-$ echo "Hello World"
-```
-
-### Redirection
-
-```bash
-$ echo "Hello ShellForge" > hello.txt
-```
-
-Append output:
-
-```bash
-$ echo "Another line" >> hello.txt
-```
-
-### Pipelines
-
-```bash
-$ cat hello.txt | grep Hello
-```
-
-### Background Processes
-
-```bash
-$ sleep 10 &
-```
-
-View active jobs:
-
-```bash
-$ jobs
-```
-
-### Project Analysis
-
-```bash
-$ project
-```
-
-### Directory Structure
-
-```bash
-$ tree src/main 2
-```
-
-### Source Search
-
-```bash
-$ findx import
-```
-
-### File Inspection
-
-```bash
-$ inspect src/main/java/AIBuiltin.java
-```
-
-### AI
-
-```bash
-$ ai create a directory named demo
-```
-
-```bash
-$ ai explain "find . -name '*.java'"
-```
-
-```bash
-$ ai execute create a file named test.txt
-```
-
-#screenshot
-Suggested screenshot: A combined terminal session showing several of the commands above in sequence.
-
----
-
-## Architecture
-
-ShellForge is divided into several major components.
-
-### 1. Shell Layer
-
-Responsible for:
-
-- Terminal initialization
-- Command input
-- History
-- Completion
-- Prompt handling
-- Shell lifecycle
-
-Implemented primarily through **JLine**.
-
-### 2. Command Execution Layer
-
-`CommandExecutor` handles:
-
-- Command parsing
-- Parameter expansion
-- Pipelines
-- Redirection
-- Built-in command dispatch
-- External process execution
-- Background process handling
-
-### 3. Built-in Command Layer
-
-Custom functionality is implemented through separate built-in command classes such as:
-
-```text
-AIBuiltin
-ProjectBuiltin
-TreeBuiltin
-FindxBuiltin
-InspectBuiltin
-JobsBuiltin
-```
-
-### 4. Project Analysis Layer
-
-`ProjectScanner` analyzes a project directory and detects information such as:
-
-- Languages
-- Build systems
-- Git usage
-- Source/test directories
-- File statistics
-- Technologies
-
-### 5. AI Layer
-
-`AIBuiltin` communicates with a local Ollama server and uses the generated response to assist with shell commands.
-
-### 6. Web Terminal Layer
-
-`WebServer` creates a pseudo-terminal using PTY4J and exposes shell communication through WebSocket connections.
-
-The React frontend connects to this WebSocket and renders the shell through xterm.js.
-
----
-
-## Architecture Flow
-
-```text
-                         ┌───────────────────────┐
-                         │   React Web Frontend  │
-                         │      xterm.js         │
-                         └───────────┬───────────┘
-                                     │
-                                  WebSocket
-                                     │
-                                     ▼
-                         ┌───────────────────────┐
-                         │      WebServer        │
-                         │   Java-WebSocket      │
-                         └───────────┬───────────┘
-                                     │
-                                   PTY4J
-                                     │
-                                     ▼
-                         ┌───────────────────────┐
-                         │     ShellForge        │
-                         │                       │
-                         │       Shell           │
-                         │         │             │
-                         │  CommandExecutor      │
-                         │         │             │
-                         │      Builtins         │
-                         └───────┬───────┬───────┘
-                                 │       │
-                                 │       │
-                                 ▼       ▼
-                         Developer     AI Assistant
-                            Tools          │
-                                           │
-                                           ▼
-                                      ┌──────────┐
-                                      │  Ollama  │
-                                      │ Qwen 2.5 │
-                                      │   3B     │
-                                      └──────────┘
-```
-
-#screenshot
-Suggested screenshot: Architecture diagram or a visual overview of the complete ShellForge system.
-
----
-
-## Project Structure
-
-```text
-ShellForge-JAVA/
-│
-├── src/
-│   └── main/
-│       └── java/
-│           ├── Main.java
-│           ├── Shell.java
-│           ├── CommandExecutor.java
-│           ├── CommandCompletion.java
-│           ├── FileNameCompleter.java
-│           ├── Builtins.java
-│           ├── JobManager.java
-│           │
-│           ├── AIBuiltin.java
-│           ├── ProjectBuiltin.java
-│           ├── ProjectScanner.java
-│           ├── TreeBuiltin.java
-│           ├── FindxBuiltin.java
-│           ├── InspectBuiltin.java
-│           │
-│           └── WebServer.java
-│
-├── frontend/
-│   ├── src/
-│   ├── package.json
-│   └── ...
-│
-├── pom.xml
-├── .gitignore
-└── README.md
-```
-
----
-
-## Tech Stack
-
-### Backend
-
-| Technology | Purpose |
-|---|---|
-| Java 26 | Core shell implementation |
-| Maven | Build and dependency management |
-| JLine | Interactive terminal, history and completion |
-| Java-WebSocket | WebSocket server |
-| PTY4J | Pseudo-terminal process management |
-| Ollama | Local AI inference |
-
-### Frontend
-
-| Technology | Purpose |
-|---|---|
-| React | Web terminal UI |
-| xterm.js | Terminal rendering |
-| xterm.js Fit Addon | Terminal sizing |
-| Vite | Frontend development and build tooling |
-
-### AI
-
-```text
-ShellForge
-     │
-     ▼
-  Ollama
-     │
-     ▼
-Qwen 2.5 3B
-```
-
-The AI assistant runs locally through Ollama.
-
----
-
-## Requirements
-
-Before running ShellForge, install:
-
-- Java JDK 26
-- Maven
-- Node.js and npm
-- Ollama — only required for AI functionality
-
-Verify Java:
-
-```bash
-java -version
-```
-
-Verify Maven:
-
-```bash
-mvn -version
-```
-
-Verify Node.js:
-
-```bash
-node -v
-```
-
-Verify npm:
-
-```bash
-npm -v
-```
-
----
-
-## Installation
-
-Clone the repository:
+### Build & run the shell
 
 ```bash
 git clone https://github.com/soumyaraofficial/ShellForge-JAVA.git
-```
-
-Enter the project directory:
-
-```bash
 cd ShellForge-JAVA
+
+mvn clean package                      # → target/shellforge-java.jar
+java -jar target/shellforge-java.jar   # prompt: $
 ```
 
-Build the project:
+Optional: persist history between sessions (read from the **environment**):
 
 ```bash
-mvn clean package
+HISTFILE=$HOME/.shellforge_history java -jar target/shellforge-java.jar
 ```
 
-The executable JAR is generated under:
+### Enable AI
+
+```bash
+ollama pull qwen2.5:3b     # make sure Ollama is listening on localhost:11434
+```
+
+### Launch the web terminal
+
+```bash
+# Terminal 1 — from the repository root (it launches target/shellforge-java.jar)
+java -cp target/shellforge-java.jar WebServer     # ws://localhost:8080
+
+# Terminal 2
+cd frontend && npm install && npm run dev         # open the URL Vite prints
+```
+
+---
+
+## 📖 Built-in Commands
+
+ShellForge has exactly **14** built-ins, registered in `Builtins.java`.
+
+| Command | Syntax | Description |
+|---|---|---|
+| `echo` | `echo [args...]` | Print arguments |
+| `exit` | `exit` | Leave the shell (saves history if `HISTFILE` is set) |
+| `type` | `type NAME` | Built-in, PATH location, or not found |
+| `pwd` | `pwd` | Print current directory |
+| `cd` | `cd PATH` &#124; `cd ~` | Change directory |
+| `complete` | `complete -C SCRIPT CMD` &#124; `-p CMD` &#124; `-r CMD` | Manage external completers |
+| `jobs` | `jobs` | List background jobs |
+| `history` | `history [N \| -r F \| -w F \| -a F]` | Show / load / save history |
+| `declare` | `declare [-p] [NAME[=VALUE] ...]` | Shell variables |
+| `ai` | `ai Q` &#124; `ai execute Q` &#124; `ai explain C` &#124; `ai fix` | Local AI assistant |
+| `project` | `project` &#124; `project analyze` | Project metadata / AI analysis |
+| `tree` | `tree [PATH] [DEPTH]` &#124; `tree DEPTH` | Directory tree |
+| `findx` | `findx TERM [DIR]` | Recursive text search |
+| `inspect` | `inspect PATH` | File / directory statistics |
+
+![demoshell.png](docs/screenshots/demoshell.png)
+
+Anything else is looked up on `PATH` and run as an external program.
+
+---
+
+## 🧠 AI Assistant
+
+Powered by **Ollama** · model **`qwen2.5:3b`** · `POST http://localhost:11434/api/generate`
+
+| Mode | What it does | Runs anything? |
+|---|---|---|
+| `ai <question>` | Suggests one shell command | ❌ Never |
+| `ai execute <question>` | Suggests a command, asks `Execute? [y/N]` | ✅ Only on `y` |
+| `ai explain <command>` | Plain-language explanation of a command | ❌ Never |
+| `ai fix` | Diagnoses the previous **command-not-found** error | ❌ Never |
+
+<div align="center">
+
+|                                                                                                       | |
+|:-----------------------------------------------------------------------------------------------------:|:---:|
+|         ![ai-features.png](docs/screenshots/ai-features.png)<br/><sub><b>ai</b> — command generation</sub>           | ![ai-execute.png](docs/screenshots/ai-execute.png)<br/><sub><b>ai execute</b> — with confirmation</sub> |
+| ![ai-explain.png](docs/screenshots/ai-explain.png)<br/><sub><b>ai explain</b> — command explanation</sub> | ![ai-fix.ong.png](docs/screenshots/ai-fix.ong.png)<br/><sub><b>ai fix</b> — AI-assisted fixing</sub> |
+
+</div>
+
 
 ```text
-target/shellforge-java.jar
+$ ai execute add mango to temp.txt
+
+AI suggestion:
+echo "mango" >> temp.txt
+
+Execute? [y/N] y
+Executing...
+Executed
 ```
+![ai-execution2.png](docs/screenshots/ai-execution2.png)
+<details>
+<summary><b>How each mode works (prompts, data sent, behavior)</b></summary>
 
----
+<br/>
 
-## Running the Shell
+- **Request:** JSON with `model`, `system`, `prompt`, `"stream": false`, `"think": false`. Connect timeout 5 s, request timeout 2 min.
+- **Parsing:** the `"response"` field is extracted by hand (no JSON library). Only `\n \r \t \" \\` escapes are decoded.
+- **Data sent:** only the text listed below. No file contents, directory listing, OS name, or working directory.
 
-Run the packaged shell:
+| Mode | Sent as prompt | System prompt asks for |
+|---|---|---|
+| `ai` / `ai execute` | The words after `ai` / `ai execute` | *Only* the command — no explanation, no markdown |
+| `ai explain` | The words after `explain` | What it does, what each argument means, expected result |
+| `ai fix` | `Command: <last command>` + `Error: <last error>` | `Problem:` + `Fix:` — never executes |
 
-```bash
-java -jar target/shellforge-java.jar
-```
+**`ai execute` details**
+- The AI text goes through the **full executor** (tokenizing, variables, pipes, redirection, PATH lookup).
+- Anything other than `y` (or EOF) prints `Cancelled.` and discards the suggestion.
+- `Executed` prints regardless of whether the command succeeded.
+- A suggested `cd` does not persist (the returned directory is discarded).
 
-You should see the ShellForge prompt:
+**`ai fix` details**
+- The last typed line is tracked by `CommandExecutor` (all lines except `ai fix` itself).
+- `lastError` is set in exactly one place: a single, non-pipeline command that is **not found**. Other failures are not captured.
+- Errors: `ai fix: no previous command found` / `ai fix: no error found`.
+
+**Tip:** the shell parses the line *before* `ai` sees it, so quote commands containing operators:
 
 ```text
-$
+$ ai explain "ls -la | grep txt"
 ```
 
-You can now use standard shell functionality and ShellForge's custom developer commands.
-
-#screenshot
-Suggested screenshot: ShellForge starting successfully and displaying the `$` prompt.
+</details>
 
 ---
 
-## Running the AI Assistant
+## 🗂 Project Intelligence
 
-Install Ollama and make sure the local Ollama service is running.
+### `project`
 
-Pull the model:
+Scans the current directory and prints a boxed summary plus a language breakdown.
 
-```bash
-ollama pull qwen2.5:3b
-```
+<div align="center">
+<img src="docs/screenshots/project.png" alt="project command" width="80%"/><br/>
+<sub>Project metadata scanning</sub>
+</div>
 
-Then start ShellForge:
+| Field | How it's detected |
+|---|---|
+| **Name** | Directory name |
+| **Type** | `pom.xml` → *Java Application*, `package.json` → *Node project*, `Cargo.toml`, `go.mod`, `pyproject.toml` / `requirements.txt`, `CMakeLists.txt`, else `<Language> Project` |
+| **Language** | Language with the most files |
+| **Build** | Maven, Gradle, npm, pip, Cargo, Go, CMake, Composer, Bundler, Swift PM |
+| **Git / README** | `.git` directory · `README.md` or `README` |
+| **Source / Tests** | First existing of `src, app, lib` · `src/test, tests, test, __tests__` |
+| **Files** | Regular files, skipping `target`, `node_modules`, `.git`, `build`, `dist`, `.idea` |
 
-```bash
-java -jar target/shellforge-java.jar
-```
-
-Example:
-
-```bash
-$ ai create a file called hello.txt
-```
-
----
-
-## Running the Web Terminal
-
-First build the Java backend:
-
-```bash
-mvn clean package
-```
-
-Then install the frontend dependencies:
-
-```bash
-cd frontend
-npm install
-```
-
-Start the frontend development server:
-
-```bash
-npm run dev
-```
-
-In another terminal, start the Java WebSocket/PTY server from the project root:
-
-```bash
-java -cp target/shellforge-java.jar WebServer
-```
-
-The WebServer listens on:
+### `project analyze`
 
 ```text
-ws://localhost:8080
+ProjectScanner → project metadata → Ollama (qwen2.5:3b) → developer-focused analysis
 ```
 
-The React development server can then connect to the Java shell through the WebSocket connection.
+Sends **metadata only** (name, type, language, build tool, git/readme flags, directories, file counts, per-language counts) and asks for: project type, main technologies, likely architecture, build system, testing setup, and likely purpose — with an instruction not to invent anything. Markdown decoration is stripped from the reply.
 
-#screenshot
-Suggested screenshot: The running browser-based ShellForge terminal after connecting to the Java backend.
+
+
+![project-analyze.png](docs/screenshots/project-analyze.png) 
+<div align="center">
+AI-assisted project analysis
+</div>
+
+> [!NOTE]
+> The model never sees your code — only counts and flags — so the analysis will be fairly generic.
 
 ---
 
-## Security Considerations
+## 🔧 Developer Tools
 
-AI-generated shell commands can potentially perform destructive operations.
+<table>
+<tr>
+<td width="33%" valign="top">
 
-ShellForge therefore separates command suggestion from execution.
+### `tree`
+```text
+tree            # depth 5
+tree 2          # depth 2
+tree src        # path
+tree src 3      # path + depth
+```
+Directories first, then files, case-insensitive sort, box-drawing branches.
 
-For example:
+</td>
+<td width="33%" valign="top">
 
-```bash
-$ ai create a file named hello.txt
+### `findx`
+```text
+findx TERM [DIR]
+findx WebSocket
+findx "history -a" src
+```
+Case-insensitive substring search with **line numbers** and a `N matches in M files` summary.
+
+</td>
+<td width="33%" valign="top">
+
+### `inspect`
+```text
+inspect pom.xml
+inspect src/main/java
+```
+File: type, size, lines, modified.<br/>
+Directory: file/dir counts, total size, file-type breakdown.
+
+</td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/%20tree.png" alt="tree"/></td>
+<td align="center"><img src="docs/screenshots/findx.png" alt="findx"/></td>
+<td align="center"><img src="docs/screenshots/inspect.png" alt="inspect"/></td>
+</tr>
+</table>
+
+<details>
+<summary><b>Details: ignored paths, searchable files, error messages</b></summary>
+
+<br/>
+
+- **Ignored directories (all three):** `.git`, `target`, `node_modules`, `build`, `dist`, `.idea`
+- **`findx` searches:** `java js jsx ts tsx css html xml json md txt properties yml yaml sql sh` — files without an extension are skipped
+- **`findx` skips lock files:** `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `composer.lock`, `Gemfile.lock`
+- **`tree` errors:** `tree: depth must be a number`, `tree: directory not found: <path>`
+- **`findx` errors:** `findx: missing search term`, `findx: directory not found: <path>`
+- **`inspect` errors:** `inspect: missing file or directory`, `inspect: file or directory not found: <path>`
+
+</details>
+
+---
+
+## 🐚 Shell Features
+
+### Operators
+
+| Operator | Meaning |
+|---|---|
+| <code>&#124;</code> | Pipe stdout of one stage into the next |
+| `>` / `1>` | Redirect stdout (overwrite) |
+| `>>` / `1>>` | Redirect stdout (append) |
+| `2>` | Redirect stderr (overwrite) |
+| `2>>` | Redirect stderr (append) |
+| `&` | Run an external command in the background |
+| `$NAME` / `${NAME}` | Expand a shell variable |
+
+> Operators must be **separate, space-delimited tokens**: `echo hi > file` redirects, `echo hi>file` does not.
+
+### Pipelines
+
+```text
+$ cat pom.xml | grep artifactId
+$ echo "banana apple cherry" | tr ' ' '\n' | sort
+$ ls -l | grep java > java-files.txt
 ```
 
-generates a command without automatically executing it.
+- All stages are **validated before anything starts** (unknown command → nothing runs).
+- External → external stages are connected by byte-pumping threads; built-in output is captured and fed to the next process.
+- Only the **last** stage is waited on; stderr is never piped.
+- Built-ins usable in a pipeline: `echo type pwd cd complete jobs history declare ai project tree`.
 
-Where execution is explicitly requested:
+### Redirection
 
-```bash
-$ ai execute create a file named hello.txt
+```text
+$ echo first > log.txt
+$ echo second >> log.txt
+$ ls /no/such/dir 2> err.txt
+$ ls /no/such/dir 2>> err.txt
 ```
 
-the generated command is displayed and requires user confirmation before execution.
+Parent directories of the target are created automatically.
 
-The AI assistant also runs locally through Ollama rather than sending shell requests to a remote AI service.
+### Variables
 
-Users should still review AI-generated commands before approving them.
+```text
+$ declare NAME=ShellForge
+$ echo Welcome to $NAME
+Welcome to ShellForge
+$ declare -p NAME
+declare -- NAME="ShellForge"
+```
 
----
+### Background jobs
 
-## Screenshots
+```text
+$ sleep 20 &
+[1] 51234
+$ jobs
+[1]+  Running                 sleep 20 &
+```
 
-#screenshot
-Main ShellForge terminal interface.
+Finished jobs are reported as `Done` once, right before the next prompt. Job numbers are recycled (highest tracked + 1).
 
-#screenshot
-Retro CRT-style web terminal.
+### History
 
-#screenshot
-AI command generation.
+| Command | Effect |
+|---|---|
+| `history` / `history N` | Show all / last N entries |
+| `history -r FILE` | Read a file into in-memory history |
+| `history -w FILE` | Overwrite file with full history |
+| `history -a FILE` | Append only entries not yet persisted |
 
-#screenshot
-AI command execution with confirmation.
+With `HISTFILE` set: loaded at startup, appended on `exit` / Ctrl-D. Duplicate writes are prevented by a persistence boundary.
 
-#screenshot
-Project analysis using `project`.
+### TAB completion
 
-#screenshot
-Directory structure using `tree`.
-
-#screenshot
-Source search using `findx`.
-
-#screenshot
-File/directory inspection using `inspect`.
-
----
-
-## Future Improvements
-
-Possible future improvements include:
-
-- More comprehensive automated testing
-- More detailed source-code inspection
-- Improved error capture for AI-assisted debugging
-- Additional shell compatibility
-- Improved terminal session management
-- Release packaging and distribution
+| Position | Behavior |
+|---|---|
+| **Command** | `PATH` executables + built-ins. One match completes with a space; common prefix extends; second TAB lists matches |
+| **Argument** | Filenames (nested paths supported, directories get `/`). Ambiguous matches **cycle** on repeated TAB |
+| **Custom** | `complete -C ./script.sh mytool` — the script is run as `script <cmd> <word> <prev>` with `COMP_LINE` / `COMP_POINT` set; each stdout line is a candidate |
 
 ---
 
-## Author
+## 🌐 Web Terminal
 
-**Soumya Ranjan Panda**
+<div align="center">
+<img src="docs/screenshots/terminal.png" alt="Retro web terminal" width="90%"/><br/>
+<sub>Retro browser-based terminal</sub>
+</div>
 
-Java / Backend Developer
+<br/>
 
-GitHub: 
-https://github.com/soumyaraofficial
+The browser runs **React + xterm.js**, which talks over a **WebSocket** to `WebServer`, which runs ShellForge inside a **PTY** (pty4j). Raw ANSI output is streamed to xterm.js, and keystrokes are written straight to the PTY — line editing, TAB and history are all handled by JLine inside the shell.
+
+**Frontend details**
+- xterm.js with **FitAddon**, VT323 font (size 20), 5000 lines of scrollback, custom 16-colour amber theme
+- Header readouts: **LINK** (LINKING / ONLINE / OFFLINE), **PTY** size, **UPTIME**
+- Effects present in the CSS: amber-on-black palette, **scanlines**, glass highlight + vignette, corner brackets, text glow, pulsing status LED
+- Connects to `ws://localhost:8080` (hard-coded `WS_URL` in `App.jsx`)
+
+> [!WARNING]
+> **The web terminal is an unauthenticated shell.** `WebServer` binds `new InetSocketAddress(8080)` (all network interfaces), has no authentication, TLS, or Origin check, and **all connected browsers share one shell session** running with your user's privileges. Only run it on a trusted machine/network, or behind a firewall or tunnel.
+
+Other behaviors: the PTY is fixed at 120×40 (browser resizes aren't forwarded), there's no frontend auto-reconnect, and an exited shell isn't restarted.
+
+---
+
+## 🏗 Architecture
+
+### Overall
+
+```mermaid
+flowchart LR
+    subgraph Browser
+        R["React App.jsx"] --> X["xterm.js + FitAddon"]
+    end
+    X <-->|"WebSocket :8080"| WS["WebServer<br/>Java-WebSocket"]
+    WS <-->|"stdin / stdout"| PTY["pty4j PtyProcess"]
+    PTY --> SH["ShellForge<br/>java -jar shellforge-java.jar"]
+    subgraph ShellForge
+        SH --> JL["JLine LineReader<br/>TAB widget, history"]
+        JL --> CE["CommandExecutor"]
+        CE --> B["Built-ins"]
+        CE --> EXT["External processes<br/>ProcessBuilder"]
+        B --> AI["AIBuiltin / ProjectBuiltin"]
+    end
+    AI -->|"HTTP /api/generate"| OL[("Ollama<br/>localhost:11434<br/>qwen2.5:3b")]
+```
+
+### Command execution flow
+
+```mermaid
+flowchart TD
+    A["readLine prompt"] --> B{"exit or EOF?"}
+    B -->|yes| Z["save HISTFILE, close"]
+    B -->|no| C["Quoting.parseCommand"]
+    C --> D["ParameterExpansion"]
+    D --> E{"pipe token present?"}
+    E -->|yes| P["executePipeline<br/>validate stages, wire stages"]
+    E -->|no| F["detect trailing &"]
+    F --> G["scan redirection operators, cut args"]
+    G --> H{"built-in?"}
+    H -->|yes| I["run built-in with redirect streams"]
+    H -->|no| J{"found on PATH?"}
+    J -->|"yes, foreground"| K["ProcessBuilder + waitFor"]
+    J -->|"yes, background"| L["JobManager.startJob"]
+    J -->|no| M["command not found → lastError"]
+    P --> N["wait for last stage"]
+    I --> A
+    K --> A
+    L --> A
+    M --> A
+    N --> A
+```
+
+### AI flow
+
+```mermaid
+flowchart TD
+    U["ai args"] --> M{"mode"}
+    M -->|question| S1["COMMAND_PROMPT + question"]
+    M -->|"execute question"| S1
+    M -->|"explain cmd"| S2["EXPLAIN_PROMPT + cmd"]
+    M -->|fix| S3["FIX_PROMPT + lastCommand + lastError"]
+    S1 --> OL[("Ollama qwen2.5:3b")]
+    S2 --> OL
+    S3 --> OL
+    OL --> R1["AI suggestion"]
+    OL --> R2["Explanation"]
+    OL --> R3["AI diagnosis"]
+    R1 -->|"execute mode"| C{"Execute? y/N"}
+    C -->|y| EX["CommandExecutor.execute"]
+    C -->|other| CA["Cancelled"]
+    PA["project analyze"] --> PS["ProjectScanner"] --> CTX["metadata text"] --> OL
+```
+
+### Web terminal sequence
+
+```mermaid
+sequenceDiagram
+    participant B as Browser (xterm.js)
+    participant W as WebServer :8080
+    participant P as PTY 120x40
+    participant S as ShellForge (JLine)
+    W->>P: start java -jar shellforge-java.jar (once, at server start)
+    B->>W: WebSocket connect
+    B->>W: keystrokes
+    W->>P: write bytes to PTY stdin
+    P->>S: terminal input
+    S->>P: prompt and output (ANSI)
+    P->>W: read 4096-byte chunks
+    W->>B: send raw text to all open connections
+```
+
+---
+
+## 🧰 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Language / build** | Java (release 26), Maven, `maven-compiler-plugin` 3.14.1, `maven-assembly-plugin` 3.7.1 (fat JAR) |
+| **Line editing** | JLine 3.30.0 |
+| **Shell engine** | Custom tokenizer, parameter expansion, executor, `JobManager`, `HistoryManager`, `ProcessBuilder` |
+| **AI** | Ollama HTTP API, `qwen2.5:3b`, JDK `java.net.http.HttpClient` (no JSON library) |
+| **Networking** | Java-WebSocket 1.6.0 |
+| **PTY** | pty4j 0.13.12 |
+| **Frontend** | React ^19.2.8, Vite ^8.3.0, `@xterm/xterm` ^6.0.0, `@xterm/addon-fit` ^0.11.0, ESLint ^10 |
+| **Fonts** | VT323, IBM Plex Mono (Google Fonts) |
+
+---
+
+## 📁 Project Structure
+
+```text
+ShellForge-JAVA/
+├── pom.xml
+├── src/main/java/                  # default package
+│   ├── Main.java                   # entry point → new Shell().run()
+│   ├── Shell.java                  # JLine setup, prompt loop, job reaping, history load/save
+│   ├── CommandExecutor.java        # parse, expand, pipelines, redirection, dispatch, processes
+│   ├── Quoting.java                # tokenizer (quotes / escapes) + echo
+│   ├── ParameterExpansion.java     # $NAME / ${NAME}
+│   ├── ShellVariables.java         # variable store
+│   ├── Builtins.java               # canonical built-in names
+│   ├── DeclareBuiltin.java
+│   ├── JobManager.java · JobsBuiltin.java
+│   ├── HistoryManager.java · HistoryBuiltin.java
+│   ├── FileNameCompleter.java      # the TAB widget in use
+│   ├── CompleteBuiltin.java · CompletionRegistry.java · ExternalCompleter.java
+│   ├── AIBuiltin.java              # ai / execute / explain / fix
+│   ├── ProjectBuiltin.java · ProjectScanner.java   # (ProjectInfo is nested in the scanner)
+│   ├── TreeBuiltin.java · FindxBuiltin.java · InspectBuiltin.java
+│   ├── WebServer.java              # PTY + WebSocket backend
+│   └── CommandCompletion.java      # earlier TAB widget — currently unused
+├── frontend/
+│   ├── package.json · vite.config.js · index.html
+│   └── src/
+│       ├── App.jsx                 # xterm.js, WebSocket client, status readouts
+│       ├── App.css                 # amber CRT styling
+│       └── main.jsx
+└── docs/screenshots/               # ← put your screenshots here
+```
+
+---
+
+## ⚠️ Limitations
+
+<details>
+<summary><b>Shell engine</b></summary>
+
+<br/>
+
+- Not supported: `<` input redirection, `2>&1`, `;`, `&&`, `||`, globbing, command substitution, here-docs, functions, scripts, aliases, `export`, `$?`.
+- No exit-status tracking.
+- Quote information is lost after tokenizing, so a quoted standalone `"|"` or `">"` still acts as an operator.
+- Shell variables aren't environment variables: they aren't exported to child processes, and `$HOME` / `$PATH` don't expand.
+- Single quotes do **not** prevent `$VAR` expansion.
+- Built-in names are case-sensitive at dispatch (`ECHO` is not the built-in).
+- `exit` works only as the whole line; `exit 3` is not handled.
+- `cd` supports a path or exactly `~` (no `cd -`, no `~/sub`, no bare `cd` to HOME).
+
+</details>
+
+<details>
+<summary><b>Pipelines, jobs and output</b></summary>
+
+<br/>
+
+- No background pipelines (`&` is dropped, pipeline runs in the foreground).
+- `findx` and `inspect` can't be used inside a pipeline.
+- Inside a pipeline, `tree` always uses depth 3 and `project` ignores `analyze`; `cd` never changes the shell's directory.
+- `tree`, `findx`, `inspect`, `project` print straight to the terminal — **their output can't be redirected or piped**.
+- A first-stage external command doesn't receive terminal stdin.
+- Jobs: no `fg` / `bg` / `kill`, no exit codes, no Stopped state.
+- TAB command names come from a `PATH` snapshot taken at startup.
+
+</details>
+
+<details>
+<summary><b>AI</b></summary>
+
+<br/>
+
+- Requires a running Ollama with `qwen2.5:3b`; the URL and model are constants (no config override).
+- `ai execute` runs model output after a y/N prompt — it is **not validated or sandboxed**. Read the suggestion before answering `y`.
+- A 3B model can be wrong; prompts include no OS / directory / file context.
+- `ai fix` only handles *command-not-found* on a single (non-pipeline) command, and never runs the fix.
+- `project analyze` has no HTTP timeout, so it can wait indefinitely if Ollama stalls.
+
+</details>
+
+<details>
+<summary><b>Web terminal & platform</b></summary>
+
+<br/>
+
+- Unauthenticated, no TLS / Origin check, binds all interfaces, one shared session (see the warning above).
+- Fixed 120×40 PTY, no resize forwarding, no reconnect, no shell restart.
+- Output is decoded per 4096-byte read, so a multi-byte UTF-8 character split across reads could render incorrectly.
+- Unix-oriented (PATH lookup, `/`-based ignore rules, `java.home/bin/java`).
+- The repository contains no automated tests.
+
+</details>
+
+---
+
+## 🗺 Roadmap
+
+**Currently implemented:** everything described above.
+
+**Ideas (not implemented):**
+
+- [ ] Configurable Ollama URL and model
+- [ ] Real JSON parsing for Ollama responses
+- [ ] Exit-status tracking (`$?`, `&&`, `||`) and richer `ai fix` error capture
+- [ ] `<` input redirection and `2>&1`
+- [ ] Loopback-only binding + auth / Origin checks for the web terminal
+- [ ] Per-connection PTY sessions and resize forwarding
+- [ ] Frontend auto-reconnect
+- [ ] Redirectable / pipeable `tree`, `findx`, `inspect`, `project`
+- [ ] `fg` / `bg` / `kill` job control
+- [ ] Unit tests for `Quoting`, `ParameterExpansion`, and the executor
+
+---
+
+<div align="center">
+
+**Built by [@soumyaraofficial](https://github.com/soumyaraofficial)**
+
+<sub>Java · JLine · Ollama · pty4j · React · xterm.js</sub>
+
+</div>
