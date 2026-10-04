@@ -1,19 +1,34 @@
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
+import org.jline.reader.LineReader;
+
 public class AIBuiltin {
+
+    private final CommandExecutor executor;
+
+    public AIBuiltin(CommandExecutor executor) {
+        this.executor = executor;
+    }
 
     private static final String OLLAMA_URL =
             "http://localhost:11434/api/generate";
 
-    private static final String MODEL = "qwen2.5:3b";
+    private static final String MODEL =
+            "qwen2.5:3b";
 
-    private static final String SYSTEM_PROMPT = """
+    // =============================================================
+    // COMMAND GENERATION PROMPT
+    // =============================================================
+
+    private static final String COMMAND_PROMPT = """
             You are an AI assistant inside a Unix-like shell.
 
             The user will describe an operation they want to perform.
@@ -35,44 +50,313 @@ public class AIBuiltin {
             Output: ls
             """;
 
+    // =============================================================
+    // EXPLANATION PROMPT
+    // =============================================================
+
+    private static final String EXPLAIN_PROMPT = """
+            You are an AI assistant inside a Unix-like shell.
+
+            The user will provide a shell command.
+
+            Explain what the command does in a clear and concise way.
+
+            Explain:
+            1. What the command does.
+            2. What each important argument or option means.
+            3. What the expected result is.
+
+            Do not execute the command.
+            Do not suggest a different command.
+            Do not use excessive explanation.
+            Use simple language.
+
+            Example:
+
+            Command:
+            find . -name "hello.txt"
+
+            Explanation:
+            The find command searches for files and directories.
+            The . means to start searching from the current directory.
+            -name "hello.txt" searches for an exact name match.
+            """;
+
+    // =============================================================
+    // MAIN AI BUILTIN
+    // =============================================================
+
     public void execute(
             List<String> args,
-            java.io.PrintStream output,
-            java.io.PrintStream errorOutput) {
+            PrintStream output,
+            PrintStream errorOutput,
+            Path currentDirectory,
+            LineReader reader) {
+
+        // =========================================================
+        // CHECK ARGUMENT
+        // =========================================================
 
         if (args.size() < 2) {
-            errorOutput.println("ai: missing question");
+
+            errorOutput.println(
+                    "ai: missing question"
+            );
+
             return;
         }
 
-        StringBuilder question = new StringBuilder();
+        // =========================================================
+        // CHECK MODE
+        //
+        // ai <question>
+        // ai execute <question>
+        // ai explain <command>
+        // =========================================================
 
-        for (int i = 1; i < args.size(); i++) {
+        String mode =
+                args.get(1);
 
-            if (i > 1) {
+        // =========================================================
+        // EXPLAIN MODE
+        // =========================================================
+
+        if (mode.equalsIgnoreCase("explain")) {
+
+            executeExplain(
+                    args,
+                    output,
+                    errorOutput
+            );
+
+            return;
+        }
+
+        // =========================================================
+        // EXECUTE MODE
+        // =========================================================
+
+        boolean executeCommand =
+                mode.equalsIgnoreCase("execute");
+
+        // =========================================================
+        // BUILD QUESTION
+        // =========================================================
+
+        StringBuilder question =
+                new StringBuilder();
+
+        int questionStart =
+                executeCommand ? 2 : 1;
+
+        if (args.size() <= questionStart) {
+
+            errorOutput.println(
+                    "ai: missing question"
+            );
+
+            return;
+        }
+
+        for (
+                int i = questionStart;
+                i < args.size();
+                i++
+        ) {
+
+            if (i > questionStart) {
                 question.append(" ");
             }
 
-            question.append(args.get(i));
+            question.append(
+                    args.get(i)
+            );
         }
+
+        // =========================================================
+        // ASK OLLAMA FOR COMMAND
+        // =========================================================
 
         try {
 
             String response =
-                    askOllama(question.toString());
+                    askOllama(
+                            COMMAND_PROMPT,
+                            question.toString()
+                    ).trim();
 
-            output.println("AI: " + response);
+            // =====================================================
+            // SHOW AI SUGGESTION
+            // =====================================================
+
+            output.println();
+
+            output.println(
+                    "AI suggestion:"
+            );
+
+            output.println(
+                    response
+            );
+
+            output.println();
+
+            // =====================================================
+            // NORMAL "ai" MODE
+            //
+            // Only suggest.
+            // Never execute.
+            // =====================================================
+
+            if (!executeCommand) {
+
+                return;
+            }
+
+            // =====================================================
+            // "ai execute" MODE
+            //
+            // Ask for confirmation.
+            // =====================================================
+
+            output.print(
+                    "Execute? [y/N] "
+            );
+
+            output.flush();
+
+            String answer =
+                    reader.readLine();
+
+            // =====================================================
+            // CANCEL
+            // =====================================================
+
+            if (
+                    answer == null
+                            || !answer.equalsIgnoreCase("y")
+            ) {
+
+                output.println(
+                        "Cancelled."
+                );
+
+                return;
+            }
+
+            // =====================================================
+            // EXECUTE APPROVED COMMAND
+            // =====================================================
+
+            output.println(
+                    "Executing..."
+            );
+
+            executor.execute(
+                    response,
+                    currentDirectory
+            );
+
+            output.println(
+                    "Executed"
+            );
 
         } catch (Exception e) {
 
             errorOutput.println(
-                    "ai: unable to connect to Ollama: "
+                    "ai: " + e.getMessage()
+            );
+        }
+    }
+
+    // =============================================================
+    // EXPLAIN COMMAND
+    // =============================================================
+
+    private void executeExplain(
+            List<String> args,
+            PrintStream output,
+            PrintStream errorOutput) {
+
+        // =========================================================
+        // CHECK COMMAND
+        // =========================================================
+
+        if (args.size() < 3) {
+
+            errorOutput.println(
+                    "ai explain: missing command"
+            );
+
+            return;
+        }
+
+        // =========================================================
+        // BUILD COMMAND STRING
+        // =========================================================
+
+        StringBuilder command =
+                new StringBuilder();
+
+        for (
+                int i = 2;
+                i < args.size();
+                i++
+        ) {
+
+            if (i > 2) {
+                command.append(" ");
+            }
+
+            command.append(
+                    args.get(i)
+            );
+        }
+
+        // =========================================================
+        // ASK OLLAMA
+        // =========================================================
+
+        try {
+
+            String explanation =
+                    askOllama(
+                            EXPLAIN_PROMPT,
+                            command.toString()
+                    ).trim();
+
+            // =====================================================
+            // SHOW EXPLANATION
+            // =====================================================
+
+            output.println();
+
+            output.println(
+                    "Explanation:"
+            );
+
+            output.println(
+                    explanation
+            );
+
+            output.println();
+
+        } catch (Exception e) {
+
+            errorOutput.println(
+                    "ai explain: "
                             + e.getMessage()
             );
         }
     }
 
-    private String askOllama(String question)
+    // =============================================================
+    // ASK OLLAMA
+    // =============================================================
+
+    private String askOllama(
+            String systemPrompt,
+            String prompt)
             throws Exception {
 
         String json = """
@@ -85,9 +369,13 @@ public class AIBuiltin {
                 }
                 """.formatted(
                 MODEL,
-                escapeJson(SYSTEM_PROMPT),
-                escapeJson(question)
+                escapeJson(systemPrompt),
+                escapeJson(prompt)
         );
+
+        // =========================================================
+        // HTTP CLIENT
+        // =========================================================
 
         HttpClient client =
                 HttpClient.newBuilder()
@@ -96,9 +384,17 @@ public class AIBuiltin {
                         )
                         .build();
 
+        // =========================================================
+        // HTTP REQUEST
+        // =========================================================
+
         HttpRequest request =
                 HttpRequest.newBuilder()
-                        .uri(URI.create(OLLAMA_URL))
+                        .uri(
+                                URI.create(
+                                        OLLAMA_URL
+                                )
+                        )
                         .timeout(
                                 Duration.ofMinutes(2)
                         )
@@ -112,12 +408,20 @@ public class AIBuiltin {
                         )
                         .build();
 
+        // =========================================================
+        // SEND REQUEST
+        // =========================================================
+
         HttpResponse<String> response =
                 client.send(
                         request,
                         HttpResponse.BodyHandlers
                                 .ofString()
                 );
+
+        // =========================================================
+        // CHECK RESPONSE
+        // =========================================================
 
         if (response.statusCode() != 200) {
 
@@ -127,17 +431,28 @@ public class AIBuiltin {
             );
         }
 
+        // =========================================================
+        // EXTRACT RESPONSE
+        // =========================================================
+
         return extractResponse(
                 response.body()
         ).trim();
     }
 
-    private String extractResponse(String json)
+    // =============================================================
+    // EXTRACT "response" FROM OLLAMA JSON
+    // =============================================================
+
+    private String extractResponse(
+            String json)
             throws IOException {
 
-        String marker = "\"response\":\"";
+        String marker =
+                "\"response\":\"";
 
-        int start = json.indexOf(marker);
+        int start =
+                json.indexOf(marker);
 
         if (start == -1) {
 
@@ -153,11 +468,18 @@ public class AIBuiltin {
 
         boolean escaped = false;
 
-        for (int i = start;
-             i < json.length();
-             i++) {
+        for (
+                int i = start;
+                i < json.length();
+                i++
+        ) {
 
-            char c = json.charAt(i);
+            char c =
+                    json.charAt(i);
+
+            // =====================================================
+            // ESCAPED CHARACTER
+            // =====================================================
 
             if (escaped) {
 
@@ -206,13 +528,33 @@ public class AIBuiltin {
         return result.toString();
     }
 
-    private String escapeJson(String value) {
+    // =============================================================
+    // ESCAPE JSON STRING
+    // =============================================================
+
+    private String escapeJson(
+            String value) {
 
         return value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
+                .replace(
+                        "\\",
+                        "\\\\"
+                )
+                .replace(
+                        "\"",
+                        "\\\""
+                )
+                .replace(
+                        "\n",
+                        "\\n"
+                )
+                .replace(
+                        "\r",
+                        "\\r"
+                )
+                .replace(
+                        "\t",
+                        "\\t"
+                );
     }
 }

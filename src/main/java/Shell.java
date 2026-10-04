@@ -76,7 +76,7 @@ public class Shell {
                         .parser(parser)
                         .option(LineReader.Option.HISTORY_IGNORE_DUPS, false)
                         .build();
-
+        executor.setReader(reader);
         HistoryManager.setHistory(reader.getHistory());
 
         // =========================================================

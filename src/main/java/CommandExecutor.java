@@ -10,9 +10,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import org.jline.reader.LineReader;
 
 public class CommandExecutor {
+    private LineReader reader;
 
+    public void setReader(LineReader reader) {
+        this.reader = reader;
+    }
     public Path execute(
             String command,
             Path currentDirectory) throws Exception {
@@ -433,12 +438,13 @@ public class CommandExecutor {
             // ------------------------------
             case "ai":
 
-                new AIBuiltin().execute(
+                new AIBuiltin(this).execute(
                         cleanArgs,
                         output,
-                        errorOutput
+                        errorOutput,
+                        currentDirectory,
+                        reader
                 );
-
                 closeRedirectedStreams(
                         output,
                         errorOutput
@@ -1069,9 +1075,18 @@ public class CommandExecutor {
                 new DeclareBuiltin().execute(args, output, errorOutput);
                 return;
 
+
+
             case "ai":
 
-                new AIBuiltin().execute(args, output, errorOutput);
+                new AIBuiltin(this).execute(
+                        args,
+                        output,
+                        errorOutput,
+                        currentDirectory,
+                        reader
+                );
+
                 return;
 
             default:
